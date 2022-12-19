@@ -7,7 +7,7 @@ import (
 
 var storageURLs = make(map[string]string)
 
-func getUrlAndCut(w http.ResponseWriter, r *http.Request) {
+func getURLAndCut(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	switch r.Method {
@@ -25,9 +25,9 @@ func getUrlAndCut(w http.ResponseWriter, r *http.Request) {
 		urlForCuts := r.URL.RequestURI()
 
 		if len(urlForCuts[1:]) >= 3 {
-			cutUrl := urlForCuts[0:3]
-			storageURLs[cutUrl] = urlForCuts
-			w.Write([]byte(cutUrl))
+			cutURL := urlForCuts[0:3]
+			storageURLs[cutURL] = urlForCuts
+			w.Write([]byte(cutURL))
 
 		} else {
 			storageURLs[urlForCuts] = urlForCuts
@@ -52,7 +52,7 @@ func returnLongURL(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	// маршрутизация запросов обработчику
-	http.HandleFunc("/", getUrlAndCut)
+	http.HandleFunc("/", getURLAndCut)
 	//http.HandleFunc("/", returnLongURL)
 
 	// конструируем свой сервер
