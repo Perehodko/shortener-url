@@ -13,12 +13,6 @@ import (
 
 var storageURLs = make(map[string]string)
 
-func get(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"message": "get called"}`))
-}
-
 func post(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -61,17 +55,17 @@ func notFound(w http.ResponseWriter, r *http.Request) {
 }
 
 func redirectTo(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusTemporaryRedirect)
 	//var link string
 	vars := mux.Vars(r)
-	shortURl := vars["id"]
-	initialURL := storageURLs[shortURl]
+	shortURL := vars["id"]
+	initialURL := storageURLs[shortURL]
 
 	//fmt.Println(storageURLs)
 	//fmt.Println("initialURL:", initialURL)
 
-	http.Redirect(w, r, initialURL, http.StatusSeeOther)
+	http.Redirect(w, r, initialURL, http.StatusTemporaryRedirect)
 	w.Header().Set("Location", initialURL)
+	//w.WriteHeader(http.StatusTemporaryRedirect)
 
 }
 
