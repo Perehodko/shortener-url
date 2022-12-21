@@ -1,12 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"math/rand"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -19,21 +19,27 @@ func post(w http.ResponseWriter, r *http.Request) {
 
 	// читаем Body
 	defer r.Body.Close()
-	bodeData, err := io.ReadAll(r.Body)
+	bodyData, err := io.ReadAll(r.Body)
 	// обрабатываем ошибку
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
+	linkFromBody := strings.ReplaceAll(string(bodyData), "{", "")
+	linkFromBody = strings.ReplaceAll(linkFromBody, "}", "")
+
+	//linkFromBody := string(bodyData)
+	fmt.Println("bodyLink", linkFromBody)
 
 	//фигачим в json
-	var dat map[string]interface{}
-	if err := json.Unmarshal(bodeData, &dat); err != nil {
-		panic(err)
-	}
+	//var dat map[string]interface{}
+	//if err := json.Unmarshal(bodyData, &dat); err != nil {
+	//	panic(err)
+	//}
 	//fmt.Println(dat["URL"])
 
-	urlForCuts := dat["URL"].(string)
+	//urlForCuts := dat["URL"].(string)
+	urlForCuts := linkFromBody
 	getHost := r.Host
 
 	//resForCut := strings.ReplaceAll(urlForCuts, "http://"+getHost+"/", "")
@@ -59,7 +65,6 @@ func notFound(w http.ResponseWriter, r *http.Request) {
 
 func redirectTo(w http.ResponseWriter, r *http.Request) {
 	//var link string
-	w.Header().Set("Allow", http.MethodGet)
 
 	vars := mux.Vars(r)
 	shortURL := vars["id"]
@@ -73,11 +78,9 @@ func redirectTo(w http.ResponseWriter, r *http.Request) {
 	//http.Redirect(w, r, initialURL, 307)
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Location", initialURL)
+	w.WriteHeader(http.StatusTemporaryRedirect)
 
-	//w.Header().Set("Location", "123")
-
-	w.WriteHeader(http.StatusPermanentRedirect)
-
+	//fmt.Println(initialURL)
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
