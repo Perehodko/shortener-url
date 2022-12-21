@@ -18,12 +18,14 @@ func post(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 
 	// читаем Body
+	defer r.Body.Close()
 	bodeData, err := io.ReadAll(r.Body)
 	// обрабатываем ошибку
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
+
 	//фигачим в json
 	var dat map[string]interface{}
 	if err := json.Unmarshal(bodeData, &dat); err != nil {
@@ -39,10 +41,11 @@ func post(w http.ResponseWriter, r *http.Request) {
 	shotrLink := shorting()
 	fmt.Println(shotrLink)
 	shortURL := "http://" + getHost + "/" + shotrLink
-	fmt.Println(shortURL)
+	fmt.Println("shortURL", shortURL, "gettingHost", getHost)
 
 	storageURLs[shotrLink] = urlForCuts
-	//fmt.Println(storageURLs)
+	fmt.Println(storageURLs)
+	fmt.Println(storageURLs)
 
 	w.Write([]byte(shortURL))
 
@@ -56,16 +59,24 @@ func notFound(w http.ResponseWriter, r *http.Request) {
 
 func redirectTo(w http.ResponseWriter, r *http.Request) {
 	//var link string
+	w.Header().Set("Allow", http.MethodGet)
+
 	vars := mux.Vars(r)
 	shortURL := vars["id"]
+	//fmt.Println("shortURL", shortURL)
 	initialURL := storageURLs[shortURL]
 
-	//fmt.Println(storageURLs)
-	//fmt.Println("initialURL:", initialURL)
+	//io.WriteString(w, `{"alive": true}`)
 
-	http.Redirect(w, r, initialURL, http.StatusTemporaryRedirect)
+	fmt.Println("initialURL", initialURL)
+
+	//http.Redirect(w, r, initialURL, 307)
+	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Location", initialURL)
-	//w.WriteHeader(http.StatusTemporaryRedirect)
+
+	//w.Header().Set("Location", "123")
+
+	w.WriteHeader(http.StatusPermanentRedirect)
 
 }
 
@@ -82,7 +93,7 @@ func shorting() string {
 func main() {
 	r := mux.NewRouter()
 	//r.HandleFunc("/", get).Methods(http.MethodGet)
-	r.HandleFunc("/", post).Methods(http.MethodPost)
+	r.HandleFunc("/", post)
 	r.HandleFunc("/", notFound)
 
 	r.HandleFunc("/{id}", redirectTo).Methods(http.MethodGet)
