@@ -13,7 +13,7 @@ import (
 
 var storageURLs = make(map[string]string)
 
-func getURLforCut(w http.ResponseWriter, r *http.Request) {
+func getURLForCut(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
@@ -43,7 +43,7 @@ func getURLforCut(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func notFound(w http.ResponseWriter, r *http.Request) {
+func notFoundFunc(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusNotFound)
 	w.Write([]byte(`{"message": "not found"}`))
@@ -73,8 +73,8 @@ func shorting() string {
 
 func main() {
 	r := mux.NewRouter()
-	r.HandleFunc("/", getURLforCut)
-	r.HandleFunc("/", notFound)
+	r.HandleFunc("/", getURLForCut)
+	r.HandleFunc("/", notFoundFunc)
 
 	r.HandleFunc("/{id}", redirectTo).Methods(http.MethodGet)
 
