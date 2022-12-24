@@ -78,7 +78,7 @@ func TestRedirectTo(t *testing.T) {
 			want: want{
 				code:     404,
 				response: `{"message": "not found"}`,
-				location: "123",
+				location: "",
 			},
 		},
 	}
