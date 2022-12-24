@@ -100,6 +100,16 @@ func TestRedirectTo(t *testing.T) {
 				t.Errorf("Expected status code %d, got %d", tt.want.code, w.Code)
 			}
 
+			// получаем и проверяем тело запроса
+			defer res.Body.Close()
+			resBody, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(resBody) != tt.want.response {
+				t.Errorf("Expected body %s, got %s", tt.want.response, w.Body.String())
+			}
+
 			// заголовок ответа
 			if res.Header.Get("Location") != tt.want.location {
 				t.Errorf("Expected Location %s, got %s", tt.want.location, res.Header.Get("Location"))
