@@ -1,14 +1,85 @@
 package main
 
 import (
+	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
-func Test_getURLforCut(t *testing.T) {
+func TestGetURLForCut(t *testing.T) {
 	// определяем структуру теста
+	type want struct {
+		code        int
+		bodyLen     int
+		contentType string
+	}
+	tests := []struct {
+		name string
+		want want
+	}{
+		// определяем тесты
+		{
+			name: "test 1: checking Content-Type header, status code is 201 and len(body)>0",
+			want: want{
+				contentType: "application/json",
+				bodyLen:     0,
+				code:        http.StatusCreated,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bodyReader := strings.NewReader(`http://privet.com/lalalala`)
+			request := httptest.NewRequest(http.MethodPost, "/", bodyReader)
+
+			// создаём новый Recorder
+			w := httptest.NewRecorder()
+			// определяем хендлер
+			h := http.HandlerFunc(getURLForCut)
+			// запускаем сервер
+			h.ServeHTTP(w, request)
+			res := w.Result()
+
+			// проверяем код ответа
+			assert.Equal(t, tt.want.code, w.Code, "Expected status code must be equal to received")
+
+			// получаем и проверяем тело запроса
+			defer res.Body.Close()
+			resBody, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assert.Greater(t, len(resBody), tt.want.bodyLen)
+
+			// заголовок ответа
+			assert.Equal(t, tt.want.contentType, res.Header.Get("Content-Type"),
+				"Expected header must be equal to received")
+		})
+	}
+}
+
+func TestShorting(t *testing.T) {
+	tests := []struct {
+		name string
+		want int
+	}{
+		{
+			name: "test 1: len of return function >0",
+			want: 0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotResult := shorting()
+			assert.Greater(t, len(gotResult), tt.want)
+		})
+	}
+}
+
+func TestNotFoundFunc(t *testing.T) {
 	type want struct {
 		code        int
 		response    string
@@ -18,11 +89,10 @@ func Test_getURLforCut(t *testing.T) {
 		name string
 		want want
 	}{
-		// определяем все тесты
 		{
-			name: "test #1",
+			name: "test 1: check status code 404, response body and header contentType",
 			want: want{
-				code:        404,
+				code:        http.StatusNotFound,
 				response:    `{"message": "not found"}`,
 				contentType: "application/json",
 			},
@@ -30,75 +100,16 @@ func Test_getURLforCut(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// запускаем каждый тест
-			request := httptest.NewRequest(http.MethodPost, "/", nil)
 
-			// создаём новый Recorder
+			request := httptest.NewRequest(http.MethodGet, "/", nil)
+
 			w := httptest.NewRecorder()
-			// определяем хендлер
 			h := http.HandlerFunc(notFoundFunc)
-			// запускаем сервер
 			h.ServeHTTP(w, request)
 			res := w.Result()
 
 			// проверяем код ответа
-			if res.StatusCode != tt.want.code {
-				t.Errorf("Expected status code %d, got %d", tt.want.code, w.Code)
-			}
-			// получаем и проверяем тело запроса
-			defer res.Body.Close()
-			resBody, err := io.ReadAll(res.Body)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if string(resBody) != tt.want.response {
-				t.Errorf("Expected body %s, got %s", tt.want.response, w.Body.String())
-			}
-
-			// заголовок ответа
-			if res.Header.Get("Content-Type") != tt.want.contentType {
-				t.Errorf("Expected Content-Type %s, got %s", tt.want.contentType, res.Header.Get("Content-Type"))
-			}
-		})
-	}
-}
-
-func TestRedirectTo(t *testing.T) {
-	type want struct {
-		code     int
-		response string
-		location string
-	}
-	tests := []struct {
-		name string
-		want want
-	}{
-		{
-			name: "test #1",
-			want: want{
-				code:     404,
-				response: `{"message": "not found"}`,
-				location: "",
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// запускаем каждый тест
-			request := httptest.NewRequest(http.MethodGet, "/abcde", nil)
-
-			// создаём новый Recorder
-			w := httptest.NewRecorder()
-			// определяем хендлер
-			h := http.HandlerFunc(notFoundFunc)
-			// запускаем сервер
-			h.ServeHTTP(w, request)
-			res := w.Result()
-
-			// проверяем код ответа
-			if res.StatusCode != tt.want.code {
-				t.Errorf("Expected status code %d, got %d", tt.want.code, w.Code)
-			}
+			assert.Equal(t, tt.want.code, w.Code, "Expected status code must be equal to received")
 
 			// получаем и проверяем тело запроса
 			defer res.Body.Close()
@@ -106,14 +117,12 @@ func TestRedirectTo(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if string(resBody) != tt.want.response {
-				t.Errorf("Expected body %s, got %s", tt.want.response, w.Body.String())
-			}
+			assert.Equal(t, tt.want.response, string(resBody),
+				"Expected status code must be equal to received")
 
 			// заголовок ответа
-			if res.Header.Get("Location") != tt.want.location {
-				t.Errorf("Expected Location %s, got %s", tt.want.location, res.Header.Get("Location"))
-			}
+			assert.Equal(t, tt.want.contentType, res.Header.Get("Content-Type"),
+				"Expected header must be equal to received")
 		})
 	}
 }
