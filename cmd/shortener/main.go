@@ -50,8 +50,10 @@ func notFoundFunc(w http.ResponseWriter, r *http.Request) {
 }
 
 func redirectTo(w http.ResponseWriter, r *http.Request) {
+
 	vars := mux.Vars(r)
 	shortURL := vars["id"]
+
 	initialURL := storageURLs[shortURL]
 
 	fmt.Println("initialURL", initialURL)
@@ -73,8 +75,8 @@ func shorting() string {
 
 func main() {
 	r := mux.NewRouter()
-	r.HandleFunc("/", getURLForCut)
-	r.HandleFunc("/", notFoundFunc)
+	r.HandleFunc("/", getURLForCut).Methods(http.MethodPost)
+	r.HandleFunc("/", notFoundFunc).Methods(http.MethodGet)
 
 	r.HandleFunc("/{id}", redirectTo).Methods(http.MethodGet)
 
