@@ -4,13 +4,11 @@ import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/gorilla/mux"
 	"io"
 	"log"
 	"math/rand"
 	"net/http"
 	"strings"
-	"time"
 )
 
 var storageURLs = make(map[string]string)
@@ -52,9 +50,13 @@ func notFoundFunc(w http.ResponseWriter, r *http.Request) {
 }
 
 func redirectTo(w http.ResponseWriter, r *http.Request) {
-
-	vars := mux.Vars(r)
-	shortURL := vars["id"]
+	shortURL := chi.URLParam(r, "id")
+	if shortURL == "" {
+		http.Error(w, "carID param is missed", http.StatusBadRequest)
+		return
+	}
+	//vars := mux.Vars(r)
+	//shortURL := vars["id"]
 
 	initialURL := storageURLs[shortURL]
 
@@ -77,7 +79,7 @@ func shorting() string {
 
 func main() {
 	r := chi.NewRouter()
-	r.Use(middleware.Timeout(3 * time.Second))
+	//r.Use(middleware.Timeout(3 * time.Second))
 
 	// зададим встроенные middleware, чтобы улучшить стабильность приложения
 	r.Use(middleware.RequestID)
@@ -86,8 +88,8 @@ func main() {
 	r.Use(middleware.Recoverer)
 
 	r.Post("/", getURLForCut)
-	r.Get("/", notFoundFunc)
 	r.Get("/{id}", redirectTo)
+	r.Get("/", notFoundFunc)
 
 	log.Fatal(http.ListenAndServe("localhost:8080", r))
 }
