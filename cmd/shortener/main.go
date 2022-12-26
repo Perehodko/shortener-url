@@ -2,13 +2,15 @@ package main
 
 import (
 	"fmt"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/gorilla/mux"
 	"io"
 	"log"
 	"math/rand"
 	"net/http"
 	"strings"
-
-	"github.com/gorilla/mux"
+	"time"
 )
 
 var storageURLs = make(map[string]string)
@@ -74,11 +76,18 @@ func shorting() string {
 }
 
 func main() {
-	r := mux.NewRouter()
-	r.HandleFunc("/", getURLForCut).Methods(http.MethodPost)
-	r.HandleFunc("/", notFoundFunc).Methods(http.MethodGet)
+	r := chi.NewRouter()
+	r.Use(middleware.Timeout(3 * time.Second))
 
-	r.HandleFunc("/{id}", redirectTo).Methods(http.MethodGet)
+	// зададим встроенные middleware, чтобы улучшить стабильность приложения
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+
+	r.Post("/", getURLForCut)
+	r.Get("/", notFoundFunc)
+	r.Get("/{id}", redirectTo)
 
 	log.Fatal(http.ListenAndServe("localhost:8080", r))
 }
