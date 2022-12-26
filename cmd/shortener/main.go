@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"io"
@@ -9,6 +8,7 @@ import (
 	"math/rand"
 	"net/http"
 	"strings"
+	"time"
 )
 
 var storageURLs = make(map[string]string)
@@ -51,16 +51,14 @@ func notFoundFunc(w http.ResponseWriter, r *http.Request) {
 
 func redirectTo(w http.ResponseWriter, r *http.Request) {
 	shortURL := chi.URLParam(r, "id")
-	if shortURL == "" {
-		http.Error(w, "carID param is missed", http.StatusBadRequest)
-		return
-	}
-	//vars := mux.Vars(r)
-	//shortURL := vars["id"]
 
 	initialURL := storageURLs[shortURL]
+	if initialURL == "" {
+		http.Error(w, "URl not in map", http.StatusBadRequest)
+		return
+	}
 
-	fmt.Println("initialURL", initialURL)
+	//fmt.Println("initialURL", initialURL)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Location", initialURL)
@@ -79,17 +77,19 @@ func shorting() string {
 
 func main() {
 	r := chi.NewRouter()
-	//r.Use(middleware.Timeout(3 * time.Second))
 
 	// зададим встроенные middleware, чтобы улучшить стабильность приложения
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(middleware.Timeout(3 * time.Second))
 
 	r.Post("/", getURLForCut)
 	r.Get("/{id}", redirectTo)
 	r.Get("/", notFoundFunc)
 
-	log.Fatal(http.ListenAndServe("localhost:8080", r))
+	//log.Fatal(http.ListenAndServe("localhost:8080", r))
+	log.Fatal(http.ListenAndServe(":8080", r))
+
 }
