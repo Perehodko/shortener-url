@@ -34,13 +34,11 @@ func getURLForCut(w http.ResponseWriter, r *http.Request) {
 
 	shortLink := shorting()
 	shortURL := "http://" + getHost + "/" + shortLink
-	//fmt.Println("shortURL", shortURL, "gettingHost", getHost)
 
 	//записываем в мапу пару shortLink:оригинальная ссылка
 	storageURLs[shortLink] = urlForCuts
 
 	w.Write([]byte(shortURL))
-
 }
 
 func notFoundFunc(w http.ResponseWriter, r *http.Request) {
@@ -54,11 +52,9 @@ func redirectTo(w http.ResponseWriter, r *http.Request) {
 
 	initialURL := storageURLs[shortURL]
 	if initialURL == "" {
-		http.Error(w, "URl not in map", http.StatusBadRequest)
+		http.Error(w, "URl not in storage", http.StatusBadRequest)
 		return
 	}
-
-	//fmt.Println("initialURL", initialURL)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Location", initialURL)
@@ -89,7 +85,5 @@ func main() {
 	r.Get("/{id}", redirectTo)
 	r.Get("/", notFoundFunc)
 
-	//log.Fatal(http.ListenAndServe("localhost:8080", r))
 	log.Fatal(http.ListenAndServe(":8080", r))
-
 }
