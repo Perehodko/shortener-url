@@ -126,3 +126,49 @@ func TestNotFoundFunc(t *testing.T) {
 		})
 	}
 }
+
+func TestRedirectTo(t *testing.T) {
+	type want struct {
+		code        int
+		response    string
+		contentType string
+	}
+	tests := []struct {
+		name string
+		want want
+	}{
+		{
+			name: "test 1: negative. check status code 400 if short URL not in storage",
+			want: want{
+				code:        http.StatusBadRequest,
+				response:    "URl not in storage\n",
+				contentType: "text/plain; charset=utf-8",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodGet, "/", nil)
+
+			w := httptest.NewRecorder()
+			h := http.HandlerFunc(redirectTo)
+			h.ServeHTTP(w, request)
+			res := w.Result()
+
+			// проверяем код ответа
+			assert.Equal(t, tt.want.code, w.Code, "Expected status code must be equal to received")
+
+			// получаем и проверяем тело запроса
+			defer res.Body.Close()
+			resBody, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assert.Equal(t, tt.want.response, string(resBody))
+
+			// заголовок ответа
+			assert.Equal(t, tt.want.contentType, res.Header.Get("Content-Type"),
+				"Expected header must be equal to received")
+		})
+	}
+}
