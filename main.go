@@ -12,7 +12,6 @@ import (
 func main() {
 	r := chi.NewRouter()
 
-	// зададим встроенные middleware, чтобы улучшить стабильность приложения
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
