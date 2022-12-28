@@ -12,8 +12,8 @@
 *.out
 
 # Binaries
-shortener/main
-shortener/shortener
+main
+handlers/handlers
 
 # Dependency directories (remove the comment below to include it)
 vendor/
