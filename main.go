@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/Perehodko/shortener-url/handlers"
+	"github.com/Perehodko/shortener-url/cmd/shortener/handlers"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"log"
