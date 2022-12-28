@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/Perehodko/shortener-url/cmd/shortener/handlers"
+	"github.com/Perehodko/shortener-url/cmd/shortener"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"log"
@@ -18,9 +18,9 @@ func main() {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(3 * time.Second))
 
-	r.Post("/", handlers.GetURLForCut)
-	r.Get("/{id}", handlers.RedirectTo)
-	r.Get("/", handlers.NotFoundFunc)
+	r.Post("/", shortener.GetURLForCut)
+	r.Get("/{id}", shortener.RedirectTo)
+	r.Get("/", shortener.NotFoundFunc)
 
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
