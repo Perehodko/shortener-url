@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
 	"github.com/stretchr/testify/assert"
@@ -38,7 +38,7 @@ func TestGetURLForCut(t *testing.T) {
 			// создаём новый Recorder
 			w := httptest.NewRecorder()
 			// определяем хендлер
-			h := http.HandlerFunc(getURLForCut)
+			h := http.HandlerFunc(GetURLForCut)
 			// запускаем сервер
 			h.ServeHTTP(w, request)
 			res := w.Result()
@@ -104,7 +104,7 @@ func TestNotFoundFunc(t *testing.T) {
 			request := httptest.NewRequest(http.MethodGet, "/", nil)
 
 			w := httptest.NewRecorder()
-			h := http.HandlerFunc(notFoundFunc)
+			h := http.HandlerFunc(NotFoundFunc)
 			h.ServeHTTP(w, request)
 			res := w.Result()
 
@@ -151,7 +151,7 @@ func TestRedirectTo(t *testing.T) {
 			request := httptest.NewRequest(http.MethodGet, "/", nil)
 
 			w := httptest.NewRecorder()
-			h := http.HandlerFunc(redirectTo)
+			h := http.HandlerFunc(RedirectTo)
 			h.ServeHTTP(w, request)
 			res := w.Result()
 

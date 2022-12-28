@@ -1,19 +1,16 @@
-package main
+package handlers
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"io"
-	"log"
 	"math/rand"
 	"net/http"
 	"strings"
-	"time"
 )
 
 var storageURLs = make(map[string]string)
 
-func getURLForCut(w http.ResponseWriter, r *http.Request) {
+func GetURLForCut(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
@@ -41,13 +38,13 @@ func getURLForCut(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(shortURL))
 }
 
-func notFoundFunc(w http.ResponseWriter, r *http.Request) {
+func NotFoundFunc(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusNotFound)
 	w.Write([]byte(`{"message": "not found"}`))
 }
 
-func redirectTo(w http.ResponseWriter, r *http.Request) {
+func RedirectTo(w http.ResponseWriter, r *http.Request) {
 	shortURL := chi.URLParam(r, "id")
 
 	initialURL := storageURLs[shortURL]
@@ -69,21 +66,4 @@ func shorting() string {
 		b[i] = letterBytes[rand.Intn(len(letterBytes))]
 	}
 	return string(b)
-}
-
-func main() {
-	r := chi.NewRouter()
-
-	// зададим встроенные middleware, чтобы улучшить стабильность приложения
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.Timeout(3 * time.Second))
-
-	r.Post("/", getURLForCut)
-	r.Get("/{id}", redirectTo)
-	r.Get("/", notFoundFunc)
-
-	log.Fatal(http.ListenAndServe(":8080", r))
 }
