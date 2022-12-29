@@ -14,7 +14,7 @@ import (
 var storageURLs = make(map[string]string)
 
 func getURLForCut(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusCreated)
 
 	// читаем Body
@@ -42,9 +42,9 @@ func getURLForCut(w http.ResponseWriter, r *http.Request) {
 }
 
 func notFoundFunc(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusNotFound)
-	w.Write([]byte(`{"message": "not found"}`))
+	w.Write([]byte("Not found"))
 }
 
 func redirectTo(w http.ResponseWriter, r *http.Request) {
@@ -56,7 +56,7 @@ func redirectTo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("Location", initialURL)
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }

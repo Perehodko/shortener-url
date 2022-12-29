@@ -25,7 +25,7 @@ func TestGetURLForCut(t *testing.T) {
 		{
 			name: "test 1: checking Content-Type header, status code is 201 and len(body)>0",
 			want: want{
-				contentType: "application/json",
+				contentType: "text/plain; charset=utf-8",
 				bodyLen:     0,
 				code:        http.StatusCreated,
 			},
@@ -62,7 +62,7 @@ func TestGetURLForCut(t *testing.T) {
 	}
 }
 
-func TestShorting(t *testing.T) {
+func TestGenerateRandomString(t *testing.T) {
 	tests := []struct {
 		name string
 		want int
@@ -94,8 +94,8 @@ func TestNotFoundFunc(t *testing.T) {
 			name: "test 1: check status code 404, response body and header contentType",
 			want: want{
 				code:        http.StatusNotFound,
-				response:    `{"message": "not found"}`,
-				contentType: "application/json",
+				response:    "Not found",
+				contentType: "text/plain; charset=utf-8",
 			},
 		},
 	}
