@@ -1,11 +1,11 @@
 package main
 
 import (
+	"github.com/Perehodko/shortener-url/internal/utils"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"io"
 	"log"
-	"math/rand"
 	"net/http"
 	"strings"
 	"time"
@@ -32,7 +32,7 @@ func getURLForCut(w http.ResponseWriter, r *http.Request) {
 	urlForCuts := linkFromBody
 	getHost := r.Host
 
-	shortLink := shorting()
+	shortLink := utils.GenerateRandomString()
 	shortURL := "http://" + getHost + "/" + shortLink
 
 	//записываем в мапу пару shortLink:оригинальная ссылка
@@ -59,16 +59,6 @@ func redirectTo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Location", initialURL)
 	w.WriteHeader(http.StatusTemporaryRedirect)
-}
-
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-func shorting() string {
-	b := make([]byte, 5)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b)
 }
 
 func main() {
