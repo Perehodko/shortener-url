@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/Perehodko/shortener-url/internal/utils"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
@@ -73,7 +74,7 @@ func TestShorting(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotResult := shorting()
+			gotResult := utils.GenerateRandomString()
 			assert.Greater(t, len(gotResult), tt.want)
 		})
 	}
