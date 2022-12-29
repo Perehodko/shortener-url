@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -25,11 +24,9 @@ func getURLForCut(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	//удаляем лишние скобки
-	linkFromBody := strings.ReplaceAll(string(bodyData), "{", "")
-	linkFromBody = strings.ReplaceAll(linkFromBody, "}", "")
 
-	urlForCuts := linkFromBody
+	//urlForCuts := linkFromBody
+	urlForCuts := string(bodyData)
 	getHost := r.Host
 
 	shortLink := utils.GenerateRandomString()
