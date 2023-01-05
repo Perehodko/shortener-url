@@ -1,18 +1,21 @@
 package main
 
 import (
+	"fmt"
+	"github.com/Perehodko/shortener-url/internal/storage"
 	"github.com/Perehodko/shortener-url/internal/utils"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"io"
 	"log"
 	"net/http"
-	"time"
 )
 
-var storageURLs = make(map[string]string)
+type newStruct struct {
+	st storage.NewInterface
+}
 
-func getURLForCut(w http.ResponseWriter, r *http.Request) {
+func (s *newStruct) getURLForCut(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusCreated)
 
@@ -33,7 +36,8 @@ func getURLForCut(w http.ResponseWriter, r *http.Request) {
 	shortURL := "http://" + getHost + "/" + shortLink
 
 	//записываем в мапу пару shortLink:оригинальная ссылка
-	storageURLs[shortLink] = urlForCuts
+	s.st.PutURLInStorage(shortLink, urlForCuts)
+	//fmt.Println(storage.URLStorage{})
 
 	w.Write([]byte(shortURL))
 }
@@ -44,10 +48,10 @@ func notFoundFunc(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Not found"))
 }
 
-func redirectTo(w http.ResponseWriter, r *http.Request) {
+func (s *newStruct) redirectTo(w http.ResponseWriter, r *http.Request) {
 	shortURL := chi.URLParam(r, "id")
-
-	initialURL := storageURLs[shortURL]
+	fmt.Println(shortURL)
+	initialURL := s.st.GetURLFromStorage(shortURL)
 	if initialURL == "" {
 		http.Error(w, "URl not in storage", http.StatusBadRequest)
 		return
@@ -61,15 +65,21 @@ func redirectTo(w http.ResponseWriter, r *http.Request) {
 func main() {
 	r := chi.NewRouter()
 
+	n := newStruct{
+		st: storage.NewURLStore(),
+	}
+
+	fmt.Println(storage.URLStorage{})
+
 	// зададим встроенные middleware, чтобы улучшить стабильность приложения
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Use(middleware.Timeout(3 * time.Second))
+	//r.Use(middleware.Timeout(3 * time.Second))
 
-	r.Post("/", getURLForCut)
-	r.Get("/{id}", redirectTo)
+	r.Post("/", n.getURLForCut)
+	r.Get("/{id}", n.redirectTo)
 	r.Get("/", notFoundFunc)
 
 	log.Fatal(http.ListenAndServe(":8080", r))

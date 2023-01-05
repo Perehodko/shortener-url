@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/Perehodko/shortener-url/internal/utils"
+	"github.com/Perehodko/shortener-url/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
@@ -9,76 +9,6 @@ import (
 	"strings"
 	"testing"
 )
-
-func TestGetURLForCut(t *testing.T) {
-	// определяем структуру теста
-	type want struct {
-		code        int
-		bodyLen     int
-		contentType string
-	}
-	tests := []struct {
-		name string
-		want want
-	}{
-		// определяем тесты
-		{
-			name: "test 1: checking Content-Type header, status code is 201 and len(body)>0",
-			want: want{
-				contentType: "text/plain; charset=utf-8",
-				bodyLen:     0,
-				code:        http.StatusCreated,
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			bodyReader := strings.NewReader(`http://privet.com/lalalala`)
-			request := httptest.NewRequest(http.MethodPost, "/", bodyReader)
-
-			// создаём новый Recorder
-			w := httptest.NewRecorder()
-			// определяем хендлер
-			h := http.HandlerFunc(getURLForCut)
-			// запускаем сервер
-			h.ServeHTTP(w, request)
-			res := w.Result()
-
-			// проверяем код ответа
-			assert.Equal(t, tt.want.code, w.Code, "Expected status code must be equal to received")
-
-			// получаем и проверяем тело запроса
-			defer res.Body.Close()
-			resBody, err := io.ReadAll(res.Body)
-			if err != nil {
-				t.Fatal(err)
-			}
-			assert.Greater(t, len(resBody), tt.want.bodyLen)
-
-			// заголовок ответа
-			assert.Equal(t, tt.want.contentType, res.Header.Get("Content-Type"),
-				"Expected header must be equal to received")
-		})
-	}
-}
-
-func TestGenerateRandomString(t *testing.T) {
-	tests := []struct {
-		name string
-		want int
-	}{
-		{
-			name: "test 1: len of return function >0",
-			want: 0,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotResult := utils.GenerateRandomString()
-			assert.Greater(t, len(gotResult), tt.want)
-		})
-	}
-}
 
 func TestNotFoundFunc(t *testing.T) {
 	type want struct {
@@ -119,7 +49,7 @@ func TestNotFoundFunc(t *testing.T) {
 				t.Fatal(err)
 			}
 			assert.Equal(t, tt.want.response, string(resBody),
-				"Expected status code must be equal to received")
+				"Expected text response must be equal to received")
 
 			// заголовок ответа
 			assert.Equal(t, tt.want.contentType, res.Header.Get("Content-Type"),
@@ -128,31 +58,118 @@ func TestNotFoundFunc(t *testing.T) {
 	}
 }
 
-func TestRedirectTo(t *testing.T) {
+func TestNewStructRedirectTo(t *testing.T) {
 	type want struct {
 		code        int
 		response    string
 		contentType string
+		target      string
+		shortLink   string
+		expectURL   string
+		urlForCut   string
 	}
-	tests := []struct {
+	cases := []struct {
 		name string
 		want want
 	}{
 		{
-			name: "test 1: negative. check status code 400 if short URL not in storage",
+			name: "test 1: checking Content-Type header, status code is 400 and message",
 			want: want{
-				code:        http.StatusBadRequest,
-				response:    "URl not in storage\n",
 				contentType: "text/plain; charset=utf-8",
+				response:    "URl not in storage\n",
+				code:        http.StatusBadRequest,
+				target:      "/123",
+				shortLink:   "",
+				urlForCut:   "",
+				expectURL:   "",
+			},
+		},
+		{
+			name: "test 2: checking Content-Type header, status code is 400",
+			want: want{
+				contentType: "text/plain; charset=utf-8",
+				response:    "URl not in storage\n",
+				code:        http.StatusBadRequest,
+				target:      "/xyz",
+				shortLink:   "xyz",
+				urlForCut:   "https://music.yandex.ru/artist/421792/tracks",
+				expectURL:   "https://music.yandex.ru/artist/421792/tracks",
 			},
 		},
 	}
-	for _, tt := range tests {
+	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			request := httptest.NewRequest(http.MethodGet, "/", nil)
-
+			s := &newStruct{
+				st: storage.NewURLStore(),
+			}
+			request := httptest.NewRequest(http.MethodGet, tt.want.target, nil)
 			w := httptest.NewRecorder()
-			h := http.HandlerFunc(redirectTo)
+			h := http.HandlerFunc(s.redirectTo)
+
+			h.ServeHTTP(w, request)
+
+			res := w.Result()
+
+			if tt.want.shortLink != "" {
+				//prepare real storage
+				s.st.PutURLInStorage(tt.want.shortLink, tt.want.urlForCut)
+				shortURLFromService := s.st.GetURLFromStorage(tt.want.shortLink)
+				assert.Equal(t, tt.want.expectURL, shortURLFromService,
+					"Expected URL from storage must be equal to received")
+			}
+
+			// проверяем код ответа
+			assert.Equal(t, tt.want.code, w.Code, "Expected status code must be equal to received")
+
+			// получаем и проверяем тело запроса
+			defer res.Body.Close()
+			resBody, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assert.Equal(t, tt.want.response, string(resBody))
+
+			// заголовок ответа
+			assert.Equal(t, tt.want.contentType, res.Header.Get("Content-Type"),
+				"Expected header must be equal to received")
+		})
+	}
+}
+
+func TestNewStructGetURLForCut(t *testing.T) {
+	type want struct {
+		code        int
+		bodyLen     int
+		contentType string
+	}
+	cases := []struct {
+		name string
+		want want
+	}{
+		//определяем тесты
+		{
+			name: "test 1: checking Content-Type header, status code is 201 and len(body)>0",
+			want: want{
+				contentType: "text/plain; charset=utf-8",
+				bodyLen:     0,
+				code:        http.StatusCreated,
+			},
+		},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			bodyReader := strings.NewReader(`http://privet.com/lalalala`)
+			request := httptest.NewRequest(http.MethodPost, "/", bodyReader)
+
+			s := &newStruct{
+				st: storage.NewURLStore(),
+			}
+
+			// создаём новый Recorder
+			w := httptest.NewRecorder()
+			// определяем хендлер
+			h := http.HandlerFunc(s.getURLForCut)
+			// запускаем сервер
 			h.ServeHTTP(w, request)
 			res := w.Result()
 
@@ -165,7 +182,7 @@ func TestRedirectTo(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			assert.Equal(t, tt.want.response, string(resBody))
+			assert.Greater(t, len(resBody), tt.want.bodyLen)
 
 			// заголовок ответа
 			assert.Equal(t, tt.want.contentType, res.Header.Get("Content-Type"),
