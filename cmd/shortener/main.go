@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/Perehodko/shortener-url/internal/storage"
 	"github.com/Perehodko/shortener-url/internal/utils"
 	"github.com/go-chi/chi/v5"
@@ -50,7 +49,6 @@ func notFoundFunc(w http.ResponseWriter, r *http.Request) {
 
 func (s *newStruct) redirectTo(w http.ResponseWriter, r *http.Request) {
 	shortURL := chi.URLParam(r, "id")
-	fmt.Println(shortURL)
 	initialURL := s.st.GetURLFromStorage(shortURL)
 	if initialURL == "" {
 		http.Error(w, "URl not in storage", http.StatusBadRequest)
@@ -68,8 +66,6 @@ func main() {
 	n := newStruct{
 		st: storage.NewURLStore(),
 	}
-
-	fmt.Println(storage.URLStorage{})
 
 	// зададим встроенные middleware, чтобы улучшить стабильность приложения
 	r.Use(middleware.RequestID)
