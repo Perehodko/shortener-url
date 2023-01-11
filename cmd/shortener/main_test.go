@@ -76,7 +76,7 @@ func TestNewStructRedirectTo(t *testing.T) {
 			name: "test 1: checking Content-Type header, status code is 400 and message",
 			want: want{
 				contentType: "text/plain; charset=utf-8",
-				response:    "URl not in storage\n",
+				response:    "in map no shortURL from request\n",
 				code:        http.StatusBadRequest,
 				target:      "/123",
 				shortLink:   "",
@@ -88,7 +88,7 @@ func TestNewStructRedirectTo(t *testing.T) {
 			name: "test 2: checking Content-Type header, status code is 400 and URL from store",
 			want: want{
 				contentType: "text/plain; charset=utf-8",
-				response:    "URl not in storage\n",
+				response:    "in map no shortURL from request\n",
 				code:        http.StatusBadRequest,
 				target:      "/xyz",
 				shortLink:   "xyz",
@@ -113,7 +113,10 @@ func TestNewStructRedirectTo(t *testing.T) {
 			if tt.want.shortLink != "" {
 				//prepare real storage
 				s.st.PutURLInStorage(tt.want.shortLink, tt.want.urlForCut)
-				shortURLFromService := s.st.GetURLFromStorage(tt.want.shortLink)
+				shortURLFromService, err := s.st.GetURLFromStorage(tt.want.shortLink)
+				if err != nil {
+					t.Fatal(err)
+				}
 				assert.Equal(t, tt.want.expectURL, shortURLFromService,
 					"Expected URL from storage must be equal to received")
 			}

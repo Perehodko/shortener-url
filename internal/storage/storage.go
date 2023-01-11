@@ -1,8 +1,10 @@
 package storage
 
+import "errors"
+
 type Storage interface {
-	PutURLInStorage(shortLink, urlForCuts string)
-	GetURLFromStorage(shortURL string) string
+	PutURLInStorage(shortLink, urlForCuts string) error
+	GetURLFromStorage(shortURL string) (string, error)
 }
 
 type URLStorage struct {
@@ -16,14 +18,16 @@ func NewURLStore() *URLStorage {
 	}
 }
 
-func (s *URLStorage) PutURLInStorage(shortLink, urlForCuts string) {
+func (s *URLStorage) PutURLInStorage(shortLink, urlForCuts string) error {
 	s.URLs[shortLink] = urlForCuts
+	return nil
 }
 
-func (s *URLStorage) GetURLFromStorage(shortURL string) string {
+func (s *URLStorage) GetURLFromStorage(shortURL string) (string, error) {
 	initialURL := s.URLs[shortURL]
 	if initialURL == "" {
-		return ""
+		return "", errors.New("in map no shortURL from request")
+	} else {
+		return initialURL, nil
 	}
-	return initialURL
 }
