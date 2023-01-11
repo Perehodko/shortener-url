@@ -11,7 +11,7 @@ import (
 )
 
 type newStruct struct {
-	st storage.NewInterface
+	st storage.Storage
 }
 
 func (s *newStruct) getURLForCut(w http.ResponseWriter, r *http.Request) {

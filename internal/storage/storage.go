@@ -1,6 +1,6 @@
 package storage
 
-type NewInterface interface {
+type Storage interface {
 	PutURLInStorage(shortLink, urlForCuts string)
 	GetURLFromStorage(shortURL string) string
 }
