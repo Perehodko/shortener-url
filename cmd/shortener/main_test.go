@@ -85,7 +85,7 @@ func TestNewStructRedirectTo(t *testing.T) {
 			},
 		},
 		{
-			name: "test 2: checking Content-Type header, status code is 400",
+			name: "test 2: checking Content-Type header, status code is 400 and URL from store",
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				response:    "URl not in storage\n",
