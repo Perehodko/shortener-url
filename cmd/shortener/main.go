@@ -35,7 +35,7 @@ func (s *newStruct) getURLForCut(w http.ResponseWriter, r *http.Request) {
 	shortURL := "http://" + getHost + "/" + shortLink
 
 	//записываем в мапу пару shortLink:оригинальная ссылка
-	err = s.st.PutURLInStorage(shortLink, urlForCuts)
+	err = s.st.PutURL(shortLink, urlForCuts)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
@@ -54,7 +54,7 @@ func notFoundFunc(w http.ResponseWriter, r *http.Request) {
 
 func (s *newStruct) redirectTo(w http.ResponseWriter, r *http.Request) {
 	shortURL := chi.URLParam(r, "id")
-	initialURL, err := s.st.GetURLFromStorage(shortURL)
+	initialURL, err := s.st.GetURL(shortURL)
 
 	if err != nil {
 		http.Error(w, err.Error(), 400)

@@ -3,8 +3,8 @@ package storage
 import "errors"
 
 type Storage interface {
-	PutURLInStorage(shortLink, urlForCuts string) error
-	GetURLFromStorage(shortURL string) (string, error)
+	PutURL(shortLink, urlForCuts string) error
+	GetURL(shortURL string) (string, error)
 }
 
 type URLStorage struct {
@@ -18,16 +18,15 @@ func NewURLStore() *URLStorage {
 	}
 }
 
-func (s *URLStorage) PutURLInStorage(shortLink, urlForCuts string) error {
+func (s *URLStorage) PutURL(shortLink, urlForCuts string) error {
 	s.URLs[shortLink] = urlForCuts
 	return nil
 }
 
-func (s *URLStorage) GetURLFromStorage(shortURL string) (string, error) {
-	initialURL := s.URLs[shortURL]
-	if initialURL == "" {
+func (s *URLStorage) GetURL(shortURL string) (string, error) {
+	initialURL, ok := s.URLs[shortURL]
+	if !ok {
 		return "", errors.New("in map no shortURL from request")
-	} else {
-		return initialURL, nil
 	}
+	return initialURL, nil
 }

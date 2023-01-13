@@ -112,8 +112,8 @@ func TestNewStructRedirectTo(t *testing.T) {
 
 			if tt.want.shortLink != "" {
 				//prepare real storage
-				s.st.PutURLInStorage(tt.want.shortLink, tt.want.urlForCut)
-				shortURLFromService, err := s.st.GetURLFromStorage(tt.want.shortLink)
+				s.st.PutURL(tt.want.shortLink, tt.want.urlForCut)
+				shortURLFromService, err := s.st.GetURL(tt.want.shortLink)
 				if err != nil {
 					t.Fatal(err)
 				}
