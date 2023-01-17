@@ -3,8 +3,8 @@ module github.com/Perehodko/shortener-url
 go 1.18
 
 require (
+	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
 	github.com/go-chi/chi/v5 v5.0.8
-	github.com/gorilla/mux v1.8.0
 	github.com/stretchr/testify v1.8.1
 )
 

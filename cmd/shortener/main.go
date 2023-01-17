@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/Perehodko/shortener-url/internal/storage"
 	"github.com/Perehodko/shortener-url/internal/utils"
 	"github.com/go-chi/chi/v5"
@@ -71,6 +73,55 @@ func (s *newStruct) redirectTo(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
+type Url struct {
+	URL string `json:"url"`
+}
+
+type Res struct {
+	Result string `json:"result"`
+}
+
+func (s *newStruct) shorten(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	decoder := json.NewDecoder(r.Body)
+	var u Url
+
+	err := decoder.Decode(&u)
+	if err != nil {
+		panic(err)
+	}
+	log.Println(u.URL, "1!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1")
+	//получаю из хранилища результат
+	//urlForCuts := linkFromBody
+	urlForCuts := string(u.URL)
+	getHost := r.Host
+
+	shortLink := utils.GenerateRandomString()
+	shortURL := "http://" + getHost + "/" + shortLink
+
+	//записываем в мапу пару shortLink:оригинальная ссылка
+	err = s.st.PutURL(shortLink, urlForCuts)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	//fmt.Println(storage.URLStorage{})
+
+	tx := Res{Result: shortURL}
+	// преобразуем tx в JSON-формат
+	txBz, err := json.Marshal(tx)
+	if err != nil {
+		panic(err)
+	}
+	// txBz — это []byte, поэтому приводим его к типу string для печати
+	fmt.Println(string(txBz), "RESULT!!!!!!!!!!!!!!!!!!!!!!!!")
+	w.Write(txBz)
+
+}
+
 func main() {
 	r := chi.NewRouter()
 
@@ -88,6 +139,7 @@ func main() {
 	r.Post("/", n.getURLForCut)
 	r.Get("/{id}", n.redirectTo)
 	r.Get("/", notFoundFunc)
+	r.Post("/api/shorten", n.shorten)
 
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
