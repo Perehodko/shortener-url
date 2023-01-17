@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/Perehodko/shortener-url/internal/storage"
 	"github.com/Perehodko/shortener-url/internal/utils"
 	"github.com/go-chi/chi/v5"
@@ -73,7 +72,7 @@ func (s *newStruct) redirectTo(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
-type Url struct {
+type URLStruct struct {
 	URL string `json:"url"`
 }
 
@@ -83,16 +82,16 @@ type Res struct {
 
 func (s *newStruct) shorten(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusCreated)
 
 	decoder := json.NewDecoder(r.Body)
-	var u Url
+	var u URLStruct
 
 	err := decoder.Decode(&u)
 	if err != nil {
 		panic(err)
 	}
-	log.Println(u.URL, "1!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1")
+	//log.Println(u.URL, "1!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1")
 	//получаю из хранилища результат
 	//urlForCuts := linkFromBody
 	urlForCuts := string(u.URL)
@@ -117,7 +116,7 @@ func (s *newStruct) shorten(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	// txBz — это []byte, поэтому приводим его к типу string для печати
-	fmt.Println(string(txBz), "RESULT!!!!!!!!!!!!!!!!!!!!!!!!")
+	//fmt.Println(string(txBz), "RESULT!!!!!!!!!!!!!!!!!!!!!!!!")
 	w.Write(txBz)
 
 }
