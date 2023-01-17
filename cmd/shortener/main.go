@@ -91,10 +91,8 @@ func (s *newStruct) shorten(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	//log.Println(u.URL, "1!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1")
 	//получаю из хранилища результат
-	//urlForCuts := linkFromBody
-	urlForCuts := string(u.URL)
+	urlForCuts := u.URL
 	getHost := r.Host
 
 	shortLink := utils.GenerateRandomString()
@@ -107,16 +105,12 @@ func (s *newStruct) shorten(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//fmt.Println(storage.URLStorage{})
-
 	tx := Res{Result: shortURL}
 	// преобразуем tx в JSON-формат
 	txBz, err := json.Marshal(tx)
 	if err != nil {
 		panic(err)
 	}
-	// txBz — это []byte, поэтому приводим его к типу string для печати
-	//fmt.Println(string(txBz), "RESULT!!!!!!!!!!!!!!!!!!!!!!!!")
 	w.Write(txBz)
 
 }
