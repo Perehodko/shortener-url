@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/Perehodko/shortener-url/internal/storage"
 	"github.com/Perehodko/shortener-url/internal/utils"
+	"github.com/caarlos0/env/v6"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"io"
@@ -115,11 +116,26 @@ func (s *newStruct) shorten(w http.ResponseWriter, r *http.Request) {
 
 }
 
+type Config struct {
+	ServerAddress string `default:":8080" env:"SERVER_ADDRESS"`
+	BaseURL       string `env:"BASE_URL"`
+}
+
 func main() {
 	r := chi.NewRouter()
 
 	n := newStruct{
 		st: storage.NewURLStore(),
+	}
+
+	var cfg Config
+	err := env.Parse(&cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	ServerAddress := cfg.ServerAddress
+	if len(ServerAddress) == 0 {
+		ServerAddress = ":8080"
 	}
 
 	// зададим встроенные middleware, чтобы улучшить стабильность приложения
@@ -134,5 +150,5 @@ func main() {
 	r.Get("/", notFoundFunc)
 	r.Post("/api/shorten", n.shorten)
 
-	log.Fatal(http.ListenAndServe(":8080", r))
+	log.Fatal(http.ListenAndServe(ServerAddress, r))
 }
