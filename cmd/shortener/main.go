@@ -44,7 +44,7 @@ func (s *newStruct) getURLForCut(w http.ResponseWriter, r *http.Request) {
 	}
 
 	shortLink := utils.GenerateRandomString()
-	shortURL := "http://" + BaseURL + "/" + shortLink
+	shortURL := BaseURL + "/" + shortLink
 
 	//записываем в мапу пару shortLink:оригинальная ссылка
 	err = s.st.PutURL(shortLink, urlForCuts)
