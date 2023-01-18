@@ -12,6 +12,13 @@ import (
 	"net/http"
 )
 
+type Config struct {
+	ServerAddress string `env:"SERVER_ADDRESS"`
+	BaseURL       string `env:"BASE_URL"`
+}
+
+var cfg Config
+
 type newStruct struct {
 	st storage.Storage
 }
@@ -29,12 +36,15 @@ func (s *newStruct) getURLForCut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//urlForCuts := linkFromBody
 	urlForCuts := string(bodyData)
-	getHost := r.Host
+
+	BaseURL := cfg.BaseURL
+	if len(BaseURL) == 0 {
+		BaseURL = r.Host
+	}
 
 	shortLink := utils.GenerateRandomString()
-	shortURL := "http://" + getHost + "/" + shortLink
+	shortURL := "http://" + BaseURL + "/" + shortLink
 
 	//записываем в мапу пару shortLink:оригинальная ссылка
 	err = s.st.PutURL(shortLink, urlForCuts)
@@ -116,11 +126,6 @@ func (s *newStruct) shorten(w http.ResponseWriter, r *http.Request) {
 
 }
 
-type Config struct {
-	ServerAddress string `default:":8080" env:"SERVER_ADDRESS"`
-	BaseURL       string `env:"BASE_URL"`
-}
-
 func main() {
 	r := chi.NewRouter()
 
@@ -128,14 +133,13 @@ func main() {
 		st: storage.NewURLStore(),
 	}
 
-	var cfg Config
 	err := env.Parse(&cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
-	ServerAddress := cfg.ServerAddress
-	if len(ServerAddress) == 0 {
-		ServerAddress = ":8080"
+	ServerAddr := cfg.ServerAddress
+	if len(ServerAddr) == 0 {
+		ServerAddr = ":8080"
 	}
 
 	// зададим встроенные middleware, чтобы улучшить стабильность приложения
@@ -150,5 +154,5 @@ func main() {
 	r.Get("/", notFoundFunc)
 	r.Post("/api/shorten", n.shorten)
 
-	log.Fatal(http.ListenAndServe(ServerAddress, r))
+	log.Fatal(http.ListenAndServe(ServerAddr, r))
 }
