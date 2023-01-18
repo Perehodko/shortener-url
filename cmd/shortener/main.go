@@ -40,7 +40,7 @@ func (s *newStruct) getURLForCut(w http.ResponseWriter, r *http.Request) {
 
 	BaseURL := cfg.BaseURL
 	if len(BaseURL) == 0 {
-		BaseURL = r.Host
+		BaseURL = "http://" + r.Host
 	}
 
 	shortLink := utils.GenerateRandomString()
