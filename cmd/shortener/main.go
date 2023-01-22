@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/Perehodko/shortener-url/internal/cons_prod"
 	"github.com/Perehodko/shortener-url/internal/storage"
 	"github.com/Perehodko/shortener-url/internal/utils"
 	"github.com/caarlos0/env/v6"
@@ -15,13 +16,20 @@ import (
 type Config struct {
 	ServerAddress string `env:"SERVER_ADDRESS"`
 	BaseURL       string `env:"BASE_URL"`
+	Path          string `env:"FILE_STORAGE_PATH"`
 }
 
 var cfg Config
 
 type newStruct struct {
 	st storage.Storage
+	p  cons_prod.Producer
+	c  cons_prod.Consumer
 }
+
+//type Event struct {
+//	ShortURL string `json:"ShortURL"`
+//}
 
 func (s *newStruct) getURLForCut(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -44,7 +52,34 @@ func (s *newStruct) getURLForCut(w http.ResponseWriter, r *http.Request) {
 	}
 
 	shortLink := utils.GenerateRandomString()
-	shortURL := BaseURL + "/" + shortLink
+	//
+	//запись в файл
+	// можно строкой писать
+	//Path := "/Users/nperekhodko/Desktop/I/yandex_courses_go/coomon_go/ya_practicum/five_inc/cons_prod/events.log"
+
+	Path := cfg.Path
+	if len(Path) == 0 {
+		shortURL := BaseURL + "/" + shortLink
+		w.Write([]byte(shortURL))
+	} else {
+		shortURL := BaseURL + "/" + shortLink
+
+		var events = cons_prod.Event{
+			ShortURL: shortURL,
+		}
+
+		producer, err := s.p.NewProducer(Path)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer producer.Close()
+
+		if err := producer.WriteEvent(events); err != nil {
+			log.Fatal(err)
+		}
+		w.Write([]byte(shortURL))
+
+	}
 
 	//записываем в мапу пару shortLink:оригинальная ссылка
 	err = s.st.PutURL(shortLink, urlForCuts)
@@ -55,7 +90,7 @@ func (s *newStruct) getURLForCut(w http.ResponseWriter, r *http.Request) {
 
 	//fmt.Println(storage.URLStorage{})
 
-	w.Write([]byte(shortURL))
+	//w.Write([]byte(shortURL))
 }
 
 func notFoundFunc(w http.ResponseWriter, r *http.Request) {
@@ -65,21 +100,49 @@ func notFoundFunc(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *newStruct) redirectTo(w http.ResponseWriter, r *http.Request) {
+	//
+	//чтение из файла
+	//
 	shortURL := chi.URLParam(r, "id")
-	initialURL, err := s.st.GetURL(shortURL)
 
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
+	Path := cfg.Path
+	if len(Path) == 0 {
+		initialURL, err := s.st.GetURL(shortURL)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		if initialURL == "" {
+			http.Error(w, "URl not in storage", http.StatusBadRequest)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("Location", initialURL)
+	} else {
+		consumer, err := s.c.NewConsumer(Path)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer consumer.Close()
+
+		readEvent, err := consumer.ReadEvent()
+		if err != nil {
+			log.Fatal(err)
+		}
+		//fmt.Println(readEvent.ShortURL)
+		initialURL := readEvent.ShortURL
+
+		if initialURL == "" {
+			http.Error(w, "URl not in storage", http.StatusBadRequest)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("Location", initialURL)
 	}
 
-	if initialURL == "" {
-		http.Error(w, "URl not in storage", http.StatusBadRequest)
-		return
-	}
-
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.Header().Set("Location", initialURL)
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
