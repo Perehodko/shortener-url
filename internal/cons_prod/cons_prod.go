@@ -19,7 +19,6 @@ type Consumer interface {
 }
 
 type Event struct {
-	//ID       int    `json:"Id"`
 	ShortURL string `json:"ShortURL"`
 }
 

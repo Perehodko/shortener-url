@@ -57,29 +57,13 @@ func (s *newStruct) getURLForCut(w http.ResponseWriter, r *http.Request) {
 	// можно строкой писать
 	//Path := "/Users/nperekhodko/Desktop/I/yandex_courses_go/coomon_go/ya_practicum/five_inc/cons_prod/events.log"
 
-	Path := cfg.Path
-	if len(Path) == 0 {
-		shortURL := BaseURL + "/" + shortLink
-		w.Write([]byte(shortURL))
-	} else {
-		shortURL := BaseURL + "/" + shortLink
+	shortURL := BaseURL + "/" + shortLink
 
-		var events = cons_prod.Event{
-			ShortURL: shortURL,
-		}
+	//var events = cons_prod.Event{
+	//		ShortURL: shortURL,
+	//}
 
-		producer, err := s.p.NewProducer(Path)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer producer.Close()
-
-		if err := producer.WriteEvent(events); err != nil {
-			log.Fatal(err)
-		}
-		w.Write([]byte(shortURL))
-
-	}
+	w.Write([]byte(shortURL))
 
 	//записываем в мапу пару shortLink:оригинальная ссылка
 	err = s.st.PutURL(shortLink, urlForCuts)
@@ -87,7 +71,6 @@ func (s *newStruct) getURLForCut(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 400)
 		return
 	}
-
 	//fmt.Println(storage.URLStorage{})
 
 	//w.Write([]byte(shortURL))
@@ -100,49 +83,21 @@ func notFoundFunc(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *newStruct) redirectTo(w http.ResponseWriter, r *http.Request) {
-	//
-	//чтение из файла
-	//
 	shortURL := chi.URLParam(r, "id")
 
-	Path := cfg.Path
-	if len(Path) == 0 {
-		initialURL, err := s.st.GetURL(shortURL)
-		if err != nil {
-			http.Error(w, err.Error(), 400)
-			return
-		}
-
-		if initialURL == "" {
-			http.Error(w, "URl not in storage", http.StatusBadRequest)
-			return
-		}
-
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.Header().Set("Location", initialURL)
-	} else {
-		consumer, err := s.c.NewConsumer(Path)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer consumer.Close()
-
-		readEvent, err := consumer.ReadEvent()
-		if err != nil {
-			log.Fatal(err)
-		}
-		//fmt.Println(readEvent.ShortURL)
-		initialURL := readEvent.ShortURL
-
-		if initialURL == "" {
-			http.Error(w, "URl not in storage", http.StatusBadRequest)
-			return
-		}
-
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.Header().Set("Location", initialURL)
+	initialURL, err := s.st.GetURL(shortURL)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
 	}
 
+	if initialURL == "" {
+		http.Error(w, "URl not in storage", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Location", initialURL)
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
@@ -191,6 +146,8 @@ func (s *newStruct) shorten(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	r := chi.NewRouter()
+
+	//File:= cfg.Path
 
 	n := newStruct{
 		st: storage.NewURLStore(),
