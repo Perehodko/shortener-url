@@ -17,6 +17,7 @@ import (
 type Config struct {
 	ServerAddress string `env:"SERVER_ADDRESS"`
 	BaseURL       string `env:"BASE_URL"`
+	FileName      string `env:"FILE_STORAGE_PATH"`
 }
 
 var cfg Config
@@ -190,8 +191,10 @@ func shorten(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	//check branch
-	fileStorage, err := NewFileStorage("somefile.json")
+
+	fn := cfg.FileName
+
+	fileStorage, err := NewFileStorage(fn)
 	if err != nil {
 		log.Fatalf("unable to create file storage: %v", err)
 	}
