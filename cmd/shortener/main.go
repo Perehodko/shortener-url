@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/Perehodko/shortener-url/internal/storage"
 	"github.com/Perehodko/shortener-url/internal/utils"
 	"github.com/caarlos0/env/v6"
@@ -10,6 +11,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 )
 
 type Config struct {
@@ -23,39 +25,97 @@ type newStruct struct {
 	st storage.Storage
 }
 
-func (s *newStruct) getURLForCut(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(http.StatusCreated)
+func NewMemStorage() storage.Storage { // обрати внимание, что возвращаем интерфейс
+	return &storage.URLStorage{URLs: make(map[string]string)}
+}
 
-	// читаем Body
-	defer r.Body.Close()
-	bodyData, err := io.ReadAll(r.Body)
-	// обрабатываем ошибку
+// file
+type FileStorage struct {
+	ms *storage.URLStorage // сделаем внутреннюю хранилку в памяти тоже интерфейсом, на случай если захотим ее замокать
+	f  *os.File
+}
+
+func (fs *FileStorage) GetURL(key string) (value string, err error) {
+	return fs.ms.GetURL(key)
+}
+
+func (fs *FileStorage) PutURL(key, value string) (err error) {
+	if err = fs.ms.PutURL(key, value); err != nil {
+		return fmt.Errorf("unable to add new key in memorystorage: %w", err)
+	}
+
+	// перезаписываем файл с нуля
+	err = fs.f.Truncate(0)
 	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
+		return fmt.Errorf("unable to truncate file: %w", err)
 	}
-
-	urlForCuts := string(bodyData)
-
-	BaseURL := cfg.BaseURL
-	if len(BaseURL) == 0 {
-		BaseURL = "http://" + r.Host
-	}
-
-	shortLink := utils.GenerateRandomString()
-	shortURL := BaseURL + "/" + shortLink
-
-	//записываем в мапу пару shortLink:оригинальная ссылка
-	err = s.st.PutURL(shortLink, urlForCuts)
+	_, err = fs.f.Seek(0, 0)
 	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
+		return fmt.Errorf("unable to get the beginning of file: %w", err)
 	}
 
-	//fmt.Println(storage.URLStorage{})
+	err = json.NewEncoder(fs.f).Encode(&fs.ms.URLs)
+	if err != nil {
+		return fmt.Errorf("unable to encode data into the file: %w", err)
+	}
+	return nil
+}
 
-	w.Write([]byte(shortURL))
+func NewFileStorage(filename string) (storage.Storage, error) { // и здесь мы тоже возвраащем интерфейс
+	// мы открываем (или создаем файл если он не существует (os.O_CREATE)), в режиме чтения и записи (os.O_RDWR) и дописываем в конец (os.O_APPEND)
+	// у созданного файла будут права 0777 - все пользователи в системе могут его читать, изменять и исполнять
+	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
+	if err != nil {
+		return nil, fmt.Errorf("unable to open file %s: %w", filename, err)
+	}
+
+	// восстанавливаем данные из файла, мы будем их хранить в формате JSON
+	m := make(map[string]string)
+	if err := json.NewDecoder(file).Decode(&m); err != nil && err != io.EOF { // проверка на io.EOF тк файл может быть пустой
+		return nil, fmt.Errorf("unable to decode contents of file %s: %w", filename, err)
+	}
+
+	return &FileStorage{
+		ms: &storage.URLStorage{URLs: m},
+		f:  file,
+	}, nil
+}
+
+func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusCreated)
+
+		// читаем Body
+		defer r.Body.Close()
+		bodyData, err := io.ReadAll(r.Body)
+		// обрабатываем ошибку
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+
+		urlForCuts := string(bodyData)
+
+		BaseURL := cfg.BaseURL
+		if len(BaseURL) == 0 {
+			BaseURL = "http://" + r.Host
+		}
+
+		shortLink := utils.GenerateRandomString()
+		shortURL := BaseURL + "/" + shortLink
+
+		//записываем в мапу пару shortLink:оригинальная ссылка
+		err = s.PutURL(shortLink, urlForCuts)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		//fmt.Println(storage.URLStorage{})
+
+		w.Write([]byte(shortURL))
+	}
 }
 
 func notFoundFunc(w http.ResponseWriter, r *http.Request) {
@@ -64,23 +124,25 @@ func notFoundFunc(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Not found"))
 }
 
-func (s *newStruct) redirectTo(w http.ResponseWriter, r *http.Request) {
-	shortURL := chi.URLParam(r, "id")
-	initialURL, err := s.st.GetURL(shortURL)
+func redirectTo(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		shortURL := chi.URLParam(r, "id")
+		initialURL, err := s.GetURL(shortURL)
 
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		if initialURL == "" {
+			http.Error(w, "URl not in storage", http.StatusBadRequest)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("Location", initialURL)
+		w.WriteHeader(http.StatusTemporaryRedirect)
 	}
-
-	if initialURL == "" {
-		http.Error(w, "URl not in storage", http.StatusBadRequest)
-		return
-	}
-
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.Header().Set("Location", initialURL)
-	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
 type URLStruct struct {
@@ -91,50 +153,56 @@ type Res struct {
 	Result string `json:"result"`
 }
 
-func (s *newStruct) shorten(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
+func shorten(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
 
-	decoder := json.NewDecoder(r.Body)
-	var u URLStruct
+		decoder := json.NewDecoder(r.Body)
+		var u URLStruct
 
-	err := decoder.Decode(&u)
-	if err != nil {
-		panic(err)
+		err := decoder.Decode(&u)
+		if err != nil {
+			panic(err)
+		}
+		//получаю из хранилища результат
+		urlForCuts := u.URL
+		getHost := r.Host
+
+		shortLink := utils.GenerateRandomString()
+		shortURL := "http://" + getHost + "/" + shortLink
+
+		//записываем в мапу пару shortLink:оригинальная ссылка
+		err = s.PutURL(shortLink, urlForCuts)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		tx := Res{Result: shortURL}
+		// преобразуем tx в JSON-формат
+		txBz, err := json.Marshal(tx)
+		if err != nil {
+			panic(err)
+		}
+		w.Write(txBz)
 	}
-	//получаю из хранилища результат
-	urlForCuts := u.URL
-	getHost := r.Host
-
-	shortLink := utils.GenerateRandomString()
-	shortURL := "http://" + getHost + "/" + shortLink
-
-	//записываем в мапу пару shortLink:оригинальная ссылка
-	err = s.st.PutURL(shortLink, urlForCuts)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
-
-	tx := Res{Result: shortURL}
-	// преобразуем tx в JSON-формат
-	txBz, err := json.Marshal(tx)
-	if err != nil {
-		panic(err)
-	}
-	w.Write(txBz)
-
 }
 
 func main() {
 	//check branch
-	r := chi.NewRouter()
-
-	n := newStruct{
-		st: storage.NewURLStore(),
+	fileStorage, err := NewFileStorage("somefile.json")
+	if err != nil {
+		log.Fatalf("unable to create file storage: %v", err)
 	}
 
-	err := env.Parse(&cfg)
+	r := chi.NewRouter()
+
+	//n := newStruct{
+	//	st: storage.NewURLStore(),
+	//}
+
+	err = env.Parse(&cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -150,10 +218,10 @@ func main() {
 	r.Use(middleware.Recoverer)
 	//r.Use(middleware.Timeout(3 * time.Second))
 
-	r.Post("/", n.getURLForCut)
-	r.Get("/{id}", n.redirectTo)
+	r.Post("/", getURLForCut(fileStorage))
+	r.Get("/{id}", redirectTo(fileStorage))
 	r.Get("/", notFoundFunc)
-	r.Post("/api/shorten", n.shorten)
+	r.Post("/api/shorten", shorten(fileStorage))
 
 	log.Fatal(http.ListenAndServe(ServerAddr, r))
 }
