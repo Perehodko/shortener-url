@@ -193,38 +193,100 @@ func shorten(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
 func main() {
 
 	fn := cfg.FileName
+	if len(fn) != 0 {
+		fileStorage, err := NewFileStorage(fn)
 
-	fileStorage, err := NewFileStorage(fn)
-	if err != nil {
-		log.Fatalf("unable to create file storage: %v", err)
+		if err != nil {
+			log.Fatalf("unable to create file storage: %v", err)
+		}
+
+		r := chi.NewRouter()
+
+		//n := newStruct{
+		//	st: storage.NewURLStore(),
+		//}
+
+		err = env.Parse(&cfg)
+		if err != nil {
+			log.Fatal(err)
+		}
+		ServerAddr := cfg.ServerAddress
+		if len(ServerAddr) == 0 {
+			ServerAddr = ":8080"
+		}
+
+		// зададим встроенные middleware, чтобы улучшить стабильность приложения
+		r.Use(middleware.RequestID)
+		r.Use(middleware.RealIP)
+		r.Use(middleware.Logger)
+		r.Use(middleware.Recoverer)
+		//r.Use(middleware.Timeout(3 * time.Second))
+
+		r.Post("/", getURLForCut(fileStorage))
+		r.Get("/{id}", redirectTo(fileStorage))
+		r.Get("/", notFoundFunc)
+		r.Post("/api/shorten", shorten(fileStorage))
+
+		log.Fatal(http.ListenAndServe(ServerAddr, r))
+	} else {
+		fileStorage := NewMemStorage()
+
+		r := chi.NewRouter()
+
+		//n := newStruct{
+		//	st: storage.NewURLStore(),
+		//}
+
+		err := env.Parse(&cfg)
+		if err != nil {
+			log.Fatal(err)
+		}
+		ServerAddr := cfg.ServerAddress
+		if len(ServerAddr) == 0 {
+			ServerAddr = ":8080"
+		}
+
+		// зададим встроенные middleware, чтобы улучшить стабильность приложения
+		r.Use(middleware.RequestID)
+		r.Use(middleware.RealIP)
+		r.Use(middleware.Logger)
+		r.Use(middleware.Recoverer)
+		//r.Use(middleware.Timeout(3 * time.Second))
+
+		r.Post("/", getURLForCut(fileStorage))
+		r.Get("/{id}", redirectTo(fileStorage))
+		r.Get("/", notFoundFunc)
+		r.Post("/api/shorten", shorten(fileStorage))
+
+		log.Fatal(http.ListenAndServe(ServerAddr, r))
 	}
 
-	r := chi.NewRouter()
-
-	//n := newStruct{
-	//	st: storage.NewURLStore(),
+	//r := chi.NewRouter()
+	//
+	////n := newStruct{
+	////	st: storage.NewURLStore(),
+	////}
+	//
+	//err := env.Parse(&cfg)
+	//if err != nil {
+	//	log.Fatal(err)
 	//}
-
-	err = env.Parse(&cfg)
-	if err != nil {
-		log.Fatal(err)
-	}
-	ServerAddr := cfg.ServerAddress
-	if len(ServerAddr) == 0 {
-		ServerAddr = ":8080"
-	}
-
-	// зададим встроенные middleware, чтобы улучшить стабильность приложения
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	//r.Use(middleware.Timeout(3 * time.Second))
-
-	r.Post("/", getURLForCut(fileStorage))
-	r.Get("/{id}", redirectTo(fileStorage))
-	r.Get("/", notFoundFunc)
-	r.Post("/api/shorten", shorten(fileStorage))
-
-	log.Fatal(http.ListenAndServe(ServerAddr, r))
+	//ServerAddr := cfg.ServerAddress
+	//if len(ServerAddr) == 0 {
+	//	ServerAddr = ":8080"
+	//}
+	//
+	//// зададим встроенные middleware, чтобы улучшить стабильность приложения
+	//r.Use(middleware.RequestID)
+	//r.Use(middleware.RealIP)
+	//r.Use(middleware.Logger)
+	//r.Use(middleware.Recoverer)
+	////r.Use(middleware.Timeout(3 * time.Second))
+	//
+	//r.Post("/", getURLForCut(fileStorage))
+	//r.Get("/{id}", redirectTo(fileStorage))
+	//r.Get("/", notFoundFunc)
+	//r.Post("/api/shorten", shorten(fileStorage))
+	//
+	//log.Fatal(http.ListenAndServe(ServerAddr, r))
 }
