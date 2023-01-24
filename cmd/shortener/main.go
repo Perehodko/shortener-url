@@ -191,8 +191,13 @@ func shorten(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-
+	err := env.Parse(&cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
 	fn := cfg.FileName
+	//fmt.Println(fn, "fn")
+	//fn = "lalala.json"
 	if len(fn) != 0 {
 		fileStorage, err := NewFileStorage(fn)
 
