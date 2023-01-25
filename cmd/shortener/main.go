@@ -221,16 +221,20 @@ func main() {
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
 	fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
-
 	flag.Parse()
-	fileStorage, _ := File(*fileStoragePath)
 
-	r := chi.NewRouter()
-
-	err := env.Parse(&cfg)
+	fileStorage, err := File(*fileStoragePath)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	r := chi.NewRouter()
+
+	err = env.Parse(&cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	ServerAddr := cfg.ServerAddress
 	if len(ServerAddr) == 0 {
 		ServerAddr = *severAddress
