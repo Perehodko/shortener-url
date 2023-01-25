@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"github.com/Perehodko/shortener-url/internal/storage"
 	"github.com/Perehodko/shortener-url/internal/utils"
@@ -96,7 +97,12 @@ func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request
 
 		BaseURL := cfg.BaseURL
 		if len(BaseURL) == 0 {
-			BaseURL = "http://" + r.Host
+			baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
+			severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
+			flag.Parse()
+
+			BaseURL = *baseURL + *severAddress
+			//BaseURL = "http://" + r.Host
 		}
 
 		shortLink := utils.GenerateRandomString()
@@ -192,6 +198,11 @@ func File() (storage.Storage, error) {
 		log.Fatal(err)
 	}
 	fn := cfg.FileName
+	if len(fn) == 0 {
+		fileStoragePath := flag.String("f", "lalala.json", "FILE_STORAGE_PATH из cl")
+		flag.Parse()
+		fn = *fileStoragePath
+	}
 
 	if len(fn) != 0 {
 		fileStorage, err := NewFileStorage(fn)
@@ -208,6 +219,12 @@ func File() (storage.Storage, error) {
 }
 
 func main() {
+	//severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
+	//baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
+	//fileStoragePath := flag.String("f", "/", "FILE_STORAGE_PATH из cl")
+	//
+	//flag.Parse()
+	//fmt.Println(*fileStoragePath, "from cl")
 
 	fileStorage, _ := File()
 
