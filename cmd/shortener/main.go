@@ -101,7 +101,7 @@ func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request
 			severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
 			flag.Parse()
 
-			BaseURL = "http://" + *baseURL + *severAddress
+			BaseURL = *baseURL + *severAddress
 			//BaseURL = "http://" + r.Host
 		}
 
