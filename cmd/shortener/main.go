@@ -96,7 +96,7 @@ func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request
 		urlForCuts := string(bodyData)
 
 		BaseURL := cfg.BaseURL
-		baseURL := flag.String("b", "http://localhost", "BASE_URL из cl")
+		baseURL := flag.String("b", "http://"+r.Host, "BASE_URL из cl")
 		flag.Parse()
 
 		if len(BaseURL) == 0 {
@@ -106,7 +106,7 @@ func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request
 		//	BaseURL = "http://" + r.Host
 		//}
 		fmt.Println(r.Host, "r.Host!!!!!!!!!!!!!!!!!!!")
-		fmt.Println(r.URL, "r.Url!!!!!!!!!!!!!!!!!!!")
+		//fmt.Println(r.URL, "r.Url!!!!!!!!!!!!!!!!!!!")
 		fmt.Println(BaseURL, "BaseURL!!!!!!!!!!!!!!!!!!!")
 
 		shortLink := utils.GenerateRandomString()
