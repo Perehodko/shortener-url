@@ -79,7 +79,7 @@ func NewFileStorage(filename string) (storage.Storage, error) { // и здесь
 	}, nil
 }
 
-func getURLForCut(s storage.Storage, flag1 string) func(w http.ResponseWriter, r *http.Request) {
+func getURLForCut(s storage.Storage, flagb string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusCreated)
@@ -98,19 +98,8 @@ func getURLForCut(s storage.Storage, flag1 string) func(w http.ResponseWriter, r
 		BaseURL := cfg.BaseURL
 
 		if len(BaseURL) == 0 {
-			//baseURL := flag.String("b", "http://"+r.Host, "BASE_URL из cl")
-			//flag.Parse()
-			//BaseURL = *baseURL
-
-			//_, BaseURL, _ = getFlags()
-			BaseURL = flag1
+			BaseURL = flagb
 		}
-		//} else {
-		//	BaseURL = "http://" + r.Host
-		//}
-		//fmt.Println(r.Host, "r.Host!!!!!!!!!!!!!!!!!!!")
-		////fmt.Println(r.URL, "r.Url!!!!!!!!!!!!!!!!!!!")
-		//fmt.Println(BaseURL, "BaseURL!!!!!!!!!!!!!!!!!!!")
 
 		shortLink := utils.GenerateRandomString()
 		shortURL := BaseURL + "/" + shortLink
@@ -178,22 +167,10 @@ func shorten(s storage.Storage, flag1 string) func(w http.ResponseWriter, r *htt
 		//получаю из хранилища результат
 		urlForCuts := u.URL
 
-		//getHost := r.Host
-
 		BaseURL := cfg.BaseURL
 		if len(BaseURL) == 0 {
-			//baseURL := flag.String("b", "http://"+r.Host, "BASE_URL из cl")
-			//flag.Parse()
-			//
-			//BaseURL = *baseURL
-
-			//_, BaseURL, _ = getFlags()
 			BaseURL = flag1
 		}
-
-		//fmt.Println(getHost, "r.Host!!!!!!!!!!!!!!!!!!!")
-		//fmt.Println(BaseURL, "BaseURL!!!!!!!!!!!!!!!!!!!")
-		//fmt.Println(*baseURL, "*baseURL!!!!!!!!!!!!!!!!!!!")
 
 		shortLink := utils.GenerateRandomString()
 		//shortURL := "http://" + getHost + "/" + shortLink
@@ -223,11 +200,6 @@ func File(flagf string) (storage.Storage, error) {
 	}
 	fn := cfg.FileName
 	if len(fn) == 0 {
-		//fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
-		//flag.Parse()
-		//fn = *fileStoragePath
-
-		//_, _, fn = getFlags()
 		fn = flagf
 	}
 
@@ -245,28 +217,12 @@ func File(flagf string) (storage.Storage, error) {
 
 }
 
-//func getFlags() (string, string, string) {
-//	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
-//	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
-//	fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
-//
-//	flag.Parse()
-//	sa := *severAddress
-//	bu := *baseURL
-//	fs := *fileStoragePath
-//	return sa, bu, fs
-//}
-
 func main() {
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
 	fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
 
 	flag.Parse()
-	//fileStoragePath := flag.String("f", "/", "FILE_STORAGE_PATH из cl")
-	//
-	//fmt.Println(*fileStoragePath, "from cl")
-
 	fileStorage, _ := File(*fileStoragePath)
 
 	r := chi.NewRouter()
@@ -277,14 +233,6 @@ func main() {
 	}
 	ServerAddr := cfg.ServerAddress
 	if len(ServerAddr) == 0 {
-		//severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
-		//flag.Parse()
-		//ServerAddr = *severAddress
-
-		//ServerAddr = ":8080"
-
-		//ServerAddr, _, _ = getFlags()
-
 		ServerAddr = *severAddress
 	}
 
