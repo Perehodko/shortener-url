@@ -1,6 +1,7 @@
 package main
 
 import (
+	"compress/flate"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -81,7 +82,8 @@ func NewFileStorage(filename string) (storage.Storage, error) { // и здесь
 
 func getURLForCut(s storage.Storage, flagb string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		//w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusCreated)
 
 		// читаем Body
@@ -139,6 +141,7 @@ func redirectTo(s storage.Storage) func(w http.ResponseWriter, r *http.Request) 
 		}
 
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		//w.Header().Set("Content-Type", "text/html")
 		w.Header().Set("Location", initialURL)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 	}
@@ -155,6 +158,7 @@ type Res struct {
 func shorten(s storage.Storage, flag1 string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Accept-Encoding", "gzip")
 		w.WriteHeader(http.StatusCreated)
 
 		decoder := json.NewDecoder(r.Body)
@@ -246,6 +250,8 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	//r.Use(middleware.Timeout(3 * time.Second))
+	compressor := middleware.NewCompressor(flate.DefaultCompression)
+	r.Use(compressor.Handler)
 
 	r.Post("/", getURLForCut(fileStorage, *baseURL))
 	r.Get("/{id}", redirectTo(fileStorage))
