@@ -96,14 +96,18 @@ func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request
 		urlForCuts := string(bodyData)
 
 		BaseURL := cfg.BaseURL
-		if len(BaseURL) == 0 {
-			baseURL := flag.String("b", "http://localhost", "BASE_URL из cl")
-			severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
-			flag.Parse()
+		baseURL := flag.String("b", "http://localhost", "BASE_URL из cl")
+		flag.Parse()
 
-			BaseURL = *baseURL + *severAddress
-			//BaseURL = "http://" + r.Host
+		if len(BaseURL) == 0 {
+			BaseURL = *baseURL
 		}
+		//} else {
+		//	BaseURL = "http://" + r.Host
+		//}
+		fmt.Println(r.Host, "r.Host!!!!!!!!!!!!!!!!!!!")
+		fmt.Println(r.URL, "r.Url!!!!!!!!!!!!!!!!!!!")
+		fmt.Println(BaseURL, "BaseURL!!!!!!!!!!!!!!!!!!!")
 
 		shortLink := utils.GenerateRandomString()
 		shortURL := BaseURL + "/" + shortLink
@@ -199,7 +203,7 @@ func File() (storage.Storage, error) {
 	}
 	fn := cfg.FileName
 	if len(fn) == 0 {
-		fileStoragePath := flag.String("f", "lalala.json", "FILE_STORAGE_PATH из cl")
+		fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
 		flag.Parse()
 		fn = *fileStoragePath
 	}
@@ -236,7 +240,10 @@ func main() {
 	}
 	ServerAddr := cfg.ServerAddress
 	if len(ServerAddr) == 0 {
-		ServerAddr = ":8080"
+		severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
+		flag.Parse()
+		ServerAddr = *severAddress
+		//ServerAddr = ":8080"
 	}
 
 	// зададим встроенные middleware, чтобы улучшить стабильность приложения
