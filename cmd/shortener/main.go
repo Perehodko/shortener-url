@@ -1,7 +1,6 @@
 package main
 
 import (
-	"compress/flate"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -250,16 +249,15 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	//r.Use(middleware.Timeout(3 * time.Second))
-	compressor := middleware.NewCompressor(flate.DefaultCompression)
-	r.Use(compressor.Handler)
+	//compressor := middleware.NewCompressor(flate.DefaultCompression)
+	//r.Use(compressor.Handler)
 
 	//v := middleware.Compress(5)
 	//r.Use(v)
-
-	r.Post("/", getURLForCut(fileStorage, *baseURL))
+	r.With(middleware.Compress(5)).Post("/", getURLForCut(fileStorage, *baseURL))
 	r.Get("/{id}", redirectTo(fileStorage))
 	r.Get("/", notFoundFunc)
-	r.Post("/api/shorten", shorten(fileStorage, *baseURL))
+	r.With(middleware.Compress(5)).Post("/api/shorten", shorten(fileStorage, *baseURL))
 
 	log.Fatal(http.ListenAndServe(ServerAddr, r))
 }
