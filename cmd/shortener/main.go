@@ -253,8 +253,8 @@ func main() {
 	compressor := middleware.NewCompressor(flate.DefaultCompression)
 	r.Use(compressor.Handler)
 
-	v := middleware.Compress(5)
-	r.Use(v)
+	//v := middleware.Compress(5)
+	//r.Use(v)
 
 	r.Post("/", getURLForCut(fileStorage, *baseURL))
 	r.Get("/{id}", redirectTo(fileStorage))
