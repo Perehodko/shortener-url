@@ -79,7 +79,7 @@ func NewFileStorage(filename string) (storage.Storage, error) { // и здесь
 	}, nil
 }
 
-func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
+func getURLForCut(s storage.Storage, flag1 string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusCreated)
@@ -96,18 +96,21 @@ func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request
 		urlForCuts := string(bodyData)
 
 		BaseURL := cfg.BaseURL
-		baseURL := flag.String("b", "http://"+r.Host, "BASE_URL из cl")
-		flag.Parse()
 
 		if len(BaseURL) == 0 {
-			BaseURL = *baseURL
+			//baseURL := flag.String("b", "http://"+r.Host, "BASE_URL из cl")
+			//flag.Parse()
+			//BaseURL = *baseURL
+
+			//_, BaseURL, _ = getFlags()
+			BaseURL = flag1
 		}
 		//} else {
 		//	BaseURL = "http://" + r.Host
 		//}
-		fmt.Println(r.Host, "r.Host!!!!!!!!!!!!!!!!!!!")
-		//fmt.Println(r.URL, "r.Url!!!!!!!!!!!!!!!!!!!")
-		fmt.Println(BaseURL, "BaseURL!!!!!!!!!!!!!!!!!!!")
+		//fmt.Println(r.Host, "r.Host!!!!!!!!!!!!!!!!!!!")
+		////fmt.Println(r.URL, "r.Url!!!!!!!!!!!!!!!!!!!")
+		//fmt.Println(BaseURL, "BaseURL!!!!!!!!!!!!!!!!!!!")
 
 		shortLink := utils.GenerateRandomString()
 		shortURL := BaseURL + "/" + shortLink
@@ -160,7 +163,7 @@ type Res struct {
 	Result string `json:"result"`
 }
 
-func shorten(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
+func shorten(s storage.Storage, flag1 string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
@@ -174,10 +177,27 @@ func shorten(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
 		}
 		//получаю из хранилища результат
 		urlForCuts := u.URL
-		getHost := r.Host
+
+		//getHost := r.Host
+
+		BaseURL := cfg.BaseURL
+		if len(BaseURL) == 0 {
+			//baseURL := flag.String("b", "http://"+r.Host, "BASE_URL из cl")
+			//flag.Parse()
+			//
+			//BaseURL = *baseURL
+
+			//_, BaseURL, _ = getFlags()
+			BaseURL = flag1
+		}
+
+		//fmt.Println(getHost, "r.Host!!!!!!!!!!!!!!!!!!!")
+		//fmt.Println(BaseURL, "BaseURL!!!!!!!!!!!!!!!!!!!")
+		//fmt.Println(*baseURL, "*baseURL!!!!!!!!!!!!!!!!!!!")
 
 		shortLink := utils.GenerateRandomString()
-		shortURL := "http://" + getHost + "/" + shortLink
+		//shortURL := "http://" + getHost + "/" + shortLink
+		shortURL := BaseURL + "/" + shortLink
 
 		//записываем в мапу пару shortLink:оригинальная ссылка
 		err = s.PutURL(shortLink, urlForCuts)
@@ -196,16 +216,19 @@ func shorten(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func File() (storage.Storage, error) {
+func File(flagf string) (storage.Storage, error) {
 	err := env.Parse(&cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fn := cfg.FileName
 	if len(fn) == 0 {
-		fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
-		flag.Parse()
-		fn = *fileStoragePath
+		//fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
+		//flag.Parse()
+		//fn = *fileStoragePath
+
+		//_, _, fn = getFlags()
+		fn = flagf
 	}
 
 	if len(fn) != 0 {
@@ -222,15 +245,29 @@ func File() (storage.Storage, error) {
 
 }
 
+//func getFlags() (string, string, string) {
+//	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
+//	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
+//	fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
+//
+//	flag.Parse()
+//	sa := *severAddress
+//	bu := *baseURL
+//	fs := *fileStoragePath
+//	return sa, bu, fs
+//}
+
 func main() {
-	//severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
-	//baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
+	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
+	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
+	fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
+
+	flag.Parse()
 	//fileStoragePath := flag.String("f", "/", "FILE_STORAGE_PATH из cl")
 	//
-	//flag.Parse()
 	//fmt.Println(*fileStoragePath, "from cl")
 
-	fileStorage, _ := File()
+	fileStorage, _ := File(*fileStoragePath)
 
 	r := chi.NewRouter()
 
@@ -240,10 +277,15 @@ func main() {
 	}
 	ServerAddr := cfg.ServerAddress
 	if len(ServerAddr) == 0 {
-		severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
-		flag.Parse()
-		ServerAddr = *severAddress
+		//severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
+		//flag.Parse()
+		//ServerAddr = *severAddress
+
 		//ServerAddr = ":8080"
+
+		//ServerAddr, _, _ = getFlags()
+
+		ServerAddr = *severAddress
 	}
 
 	// зададим встроенные middleware, чтобы улучшить стабильность приложения
@@ -253,10 +295,10 @@ func main() {
 	r.Use(middleware.Recoverer)
 	//r.Use(middleware.Timeout(3 * time.Second))
 
-	r.Post("/", getURLForCut(fileStorage))
+	r.Post("/", getURLForCut(fileStorage, *baseURL))
 	r.Get("/{id}", redirectTo(fileStorage))
 	r.Get("/", notFoundFunc)
-	r.Post("/api/shorten", shorten(fileStorage))
+	r.Post("/api/shorten", shorten(fileStorage, *baseURL))
 
 	log.Fatal(http.ListenAndServe(ServerAddr, r))
 }
