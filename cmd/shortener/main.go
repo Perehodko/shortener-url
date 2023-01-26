@@ -141,8 +141,8 @@ func redirectTo(s storage.Storage) func(w http.ResponseWriter, r *http.Request) 
 
 		//w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		//w.Header().Set("Content-Type", "gzip")
-		w.Header().Set("Content-Type", "text/html")
 		w.Header().Set("Location", initialURL)
+		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusTemporaryRedirect)
 	}
 }
@@ -252,13 +252,14 @@ func main() {
 	//r.Use(middleware.Timeout(3 * time.Second))
 	//compressor := middleware.NewCompressor(flate.DefaultCompression)
 	//r.Use(compressor.Handler)
+	r.Use(middleware.Compress(5))
 
 	//v := middleware.Compress(5)
 	//r.Use(v)
-	r.With(middleware.Compress(5)).Post("/", getURLForCut(fileStorage, *baseURL))
+	r.Post("/", getURLForCut(fileStorage, *baseURL))
 	r.Get("/{id}", redirectTo(fileStorage))
 	r.Get("/", notFoundFunc)
-	r.With(middleware.Compress(5)).Post("/api/shorten", shorten(fileStorage, *baseURL))
+	r.Post("/api/shorten", shorten(fileStorage, *baseURL))
 
 	log.Fatal(http.ListenAndServe(ServerAddr, r))
 }
