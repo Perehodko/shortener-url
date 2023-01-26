@@ -25,7 +25,6 @@ var cfg Config
 func getURLForCut(s storage.Storage, flagb string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		//w.Header().Set("Content-Type", "text/html")
 		//w.Header().Set("Accept-Encoding", "gzip")
 		//w.Header().Set("Content-Encoding", "gzip")
 		w.WriteHeader(http.StatusCreated)
@@ -86,9 +85,6 @@ func redirectTo(s storage.Storage) func(w http.ResponseWriter, r *http.Request) 
 
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("Location", initialURL)
-		//w.Header().Set("Content-Type", "text/html")
-		//w.Header().Set("Accept-Encoding", "gzip")
-		//w.Header().Set("Content-Encoding", "gzip")
 		w.WriteHeader(http.StatusTemporaryRedirect)
 	}
 }
@@ -104,8 +100,6 @@ type Res struct {
 func shorten(s storage.Storage, flag1 string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		//w.Header().Set("Accept-Encoding", "gzip")
-		//w.Header().Set("Content-Encoding", "gzip")
 
 		w.WriteHeader(http.StatusCreated)
 
@@ -145,7 +139,7 @@ func shorten(s storage.Storage, flag1 string) func(w http.ResponseWriter, r *htt
 	}
 }
 
-func File(flagf string) (storage.Storage, error) {
+func Storage(flagf string) (storage.Storage, error) {
 	err := env.Parse(&cfg)
 	if err != nil {
 		log.Fatal(err)
@@ -175,7 +169,7 @@ func main() {
 	fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
 	flag.Parse()
 
-	fileStorage, err := File(*fileStoragePath)
+	fileStorage, err := Storage(*fileStoragePath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -197,11 +191,6 @@ func main() {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	//r.Use(middleware.Timeout(3 * time.Second))
-	//compressor := middleware.NewCompressor(flate.DefaultCompression)
-	//r.Use(compressor.Handler)
-	//r.Use(middleware.Compress(5))
-
 	r.Use(middleware.Compress(5))
 	r.Use(middlewares.Decompress)
 

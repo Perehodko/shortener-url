@@ -37,7 +37,7 @@ func (s *URLStorage) GetURL(shortURL string) (string, error) {
 	return initialURL, nil
 }
 
-func NewMemStorage() Storage { // обрати внимание, что возвращаем интерфейс
+func NewMemStorage() Storage { //  возвращаем интерфейс
 	return &URLStorage{URLs: make(map[string]string)}
 }
 
