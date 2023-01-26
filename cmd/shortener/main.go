@@ -139,8 +139,9 @@ func redirectTo(s storage.Storage) func(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		//w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		//w.Header().Set("Content-Type", "gzip")
+		w.Header().Set("Content-Type", "text/html")
 		w.Header().Set("Location", initialURL)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 	}
