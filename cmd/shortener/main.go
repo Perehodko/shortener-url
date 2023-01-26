@@ -82,7 +82,9 @@ func NewFileStorage(filename string) (storage.Storage, error) { // и здесь
 func getURLForCut(s storage.Storage, flagb string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		//w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.Header().Set("Content-Type", "text/html")
+		//w.Header().Set("Content-Type", "text/html")
+		w.Header().Set("Accept-Encoding", "gzip")
+		w.Header().Set("Content-Encoding", "gzip")
 		w.WriteHeader(http.StatusCreated)
 
 		// читаем Body
@@ -142,7 +144,9 @@ func redirectTo(s storage.Storage) func(w http.ResponseWriter, r *http.Request) 
 		//w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		//w.Header().Set("Content-Type", "gzip")
 		w.Header().Set("Location", initialURL)
-		w.Header().Set("Content-Type", "text/html")
+		//w.Header().Set("Content-Type", "text/html")
+		w.Header().Set("Accept-Encoding", "gzip")
+		w.Header().Set("Content-Encoding", "gzip")
 		w.WriteHeader(http.StatusTemporaryRedirect)
 	}
 }
@@ -159,6 +163,8 @@ func shorten(s storage.Storage, flag1 string) func(w http.ResponseWriter, r *htt
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Accept-Encoding", "gzip")
+		w.Header().Set("Content-Encoding", "gzip")
+
 		w.WriteHeader(http.StatusCreated)
 
 		decoder := json.NewDecoder(r.Body)
@@ -252,6 +258,7 @@ func main() {
 	//r.Use(middleware.Timeout(3 * time.Second))
 	//compressor := middleware.NewCompressor(flate.DefaultCompression)
 	//r.Use(compressor.Handler)
+	//r.Use(middleware.Compress(5))
 	r.Use(middleware.Compress(5))
 
 	//v := middleware.Compress(5)
