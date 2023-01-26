@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -10,10 +12,37 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 )
+
+type Ctxkey struct{}
+
+func Decompress(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var reader io.Reader
+		if r.Header.Get(`Content-Encoding`) == `gzip` {
+			gz, err := gzip.NewReader(r.Body)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			reader = gz
+			defer gz.Close()
+		} else {
+			reader = r.Body
+		}
+		body, err := io.ReadAll(reader)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		r.Body = ioutil.NopCloser(bytes.NewReader(body))
+		next.ServeHTTP(w, r)
+	})
+}
 
 type Config struct {
 	ServerAddress string `env:"SERVER_ADDRESS"`
@@ -81,10 +110,10 @@ func NewFileStorage(filename string) (storage.Storage, error) { // и здесь
 
 func getURLForCut(s storage.Storage, flagb string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		//w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		//w.Header().Set("Content-Type", "text/html")
-		w.Header().Set("Accept-Encoding", "gzip")
-		w.Header().Set("Content-Encoding", "gzip")
+		//w.Header().Set("Accept-Encoding", "gzip")
+		//w.Header().Set("Content-Encoding", "gzip")
 		w.WriteHeader(http.StatusCreated)
 
 		// читаем Body
@@ -141,12 +170,11 @@ func redirectTo(s storage.Storage) func(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 
-		//w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		//w.Header().Set("Content-Type", "gzip")
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("Location", initialURL)
 		//w.Header().Set("Content-Type", "text/html")
-		w.Header().Set("Accept-Encoding", "gzip")
-		w.Header().Set("Content-Encoding", "gzip")
+		//w.Header().Set("Accept-Encoding", "gzip")
+		//w.Header().Set("Content-Encoding", "gzip")
 		w.WriteHeader(http.StatusTemporaryRedirect)
 	}
 }
@@ -162,8 +190,8 @@ type Res struct {
 func shorten(s storage.Storage, flag1 string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Accept-Encoding", "gzip")
-		w.Header().Set("Content-Encoding", "gzip")
+		//w.Header().Set("Accept-Encoding", "gzip")
+		//w.Header().Set("Content-Encoding", "gzip")
 
 		w.WriteHeader(http.StatusCreated)
 
@@ -259,10 +287,10 @@ func main() {
 	//compressor := middleware.NewCompressor(flate.DefaultCompression)
 	//r.Use(compressor.Handler)
 	//r.Use(middleware.Compress(5))
-	r.Use(middleware.Compress(5))
 
-	//v := middleware.Compress(5)
-	//r.Use(v)
+	r.Use(middleware.Compress(5))
+	r.Use(Decompress)
+
 	r.Post("/", getURLForCut(fileStorage, *baseURL))
 	r.Get("/{id}", redirectTo(fileStorage))
 	r.Get("/", notFoundFunc)
