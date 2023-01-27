@@ -138,10 +138,10 @@ func shorten(s storage.Storage, flag1 string) func(w http.ResponseWriter, r *htt
 }
 
 func NewStorage(filename string) (storage.Storage, error) {
-	//err := env.Parse(&cfg)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
+	err := env.Parse(&cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	fn := cfg.FileName
 	if len(fn) == 0 {
