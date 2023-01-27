@@ -138,8 +138,18 @@ func shorten(s storage.Storage, flag1 string) func(w http.ResponseWriter, r *htt
 }
 
 func NewStorage(filename string) (storage.Storage, error) {
-	if len(filename) != 0 {
-		fileStorage, err := storage.NewFileStorage(filename)
+	//err := env.Parse(&cfg)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+
+	fn := cfg.FileName
+	if len(fn) == 0 {
+		fn = filename
+	}
+
+	if len(fn) != 0 {
+		fileStorage, err := storage.NewFileStorage(fn)
 
 		if err != nil {
 			log.Fatalf("unable to create file storage: %v", err)
@@ -158,12 +168,7 @@ func main() {
 	fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
 	flag.Parse()
 
-	fn := cfg.FileName
-	if len(fn) == 0 {
-		fn = *fileStoragePath
-	}
-
-	fileStorage, err := NewStorage(fn)
+	fileStorage, err := NewStorage(*fileStoragePath)
 	if err != nil {
 		log.Fatal(err)
 	}
