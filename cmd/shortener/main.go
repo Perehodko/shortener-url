@@ -137,16 +137,16 @@ func shorten(s storage.Storage, flag1 string) func(w http.ResponseWriter, r *htt
 	}
 }
 
-func NewStorage(filename string) (storage.Storage, error) {
-	err := env.Parse(&cfg)
-	if err != nil {
-		log.Fatal(err)
-	}
+func NewStorage(fn string) (storage.Storage, error) {
+	//err := env.Parse(&cfg)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
 
-	fn := cfg.FileName
-	if len(fn) == 0 {
-		fn = filename
-	}
+	//fn := cfg.FileName
+	//if len(fn) == 0 {
+	//	fn = filename
+	//}
 
 	if len(fn) != 0 {
 		fileStorage, err := storage.NewFileStorage(fn)
@@ -168,7 +168,17 @@ func main() {
 	fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
 	flag.Parse()
 
-	fileStorage, err := NewStorage(*fileStoragePath)
+	err := env.Parse(&cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fn := cfg.FileName
+	if len(fn) == 0 {
+		fn = *fileStoragePath
+	}
+
+	fileStorage, err := NewStorage(fn)
 	if err != nil {
 		log.Fatal(err)
 	}
