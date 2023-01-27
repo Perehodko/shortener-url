@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"github.com/Perehodko/shortener-url/internal/middlewares"
 	"github.com/Perehodko/shortener-url/internal/storage"
 	"github.com/Perehodko/shortener-url/internal/utils"
@@ -141,8 +142,8 @@ func NewStorage(fileName string) (storage.Storage, error) {
 	if len(fileName) != 0 {
 		fileStorage, err := storage.NewFileStorage(fileName)
 
-		if err != nil {
-			log.Fatalf("unable to create file storage: %v", err)
+		if err := env.Parse(&cfg); err != nil {
+			return nil, fmt.Errorf("unable to parse env: %w", err)
 		}
 		return fileStorage, err
 	} else {
