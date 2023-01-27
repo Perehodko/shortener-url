@@ -25,8 +25,6 @@ var cfg Config
 func getURLForCut(s storage.Storage, flagb string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		//w.Header().Set("Accept-Encoding", "gzip")
-		//w.Header().Set("Content-Encoding", "gzip")
 		w.WriteHeader(http.StatusCreated)
 
 		// читаем Body
@@ -34,7 +32,7 @@ func getURLForCut(s storage.Storage, flagb string) func(w http.ResponseWriter, r
 		bodyData, err := io.ReadAll(r.Body)
 		// обрабатываем ошибку
 		if err != nil {
-			http.Error(w, err.Error(), 500)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -133,20 +131,21 @@ func shorten(s storage.Storage, flag1 string) func(w http.ResponseWriter, r *htt
 		// преобразуем tx в JSON-формат
 		txBz, err := json.Marshal(tx)
 		if err != nil {
-			panic(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 		w.Write(txBz)
 	}
 }
 
-func Storage(flagf string) (storage.Storage, error) {
+func NewStorage(filename string) (storage.Storage, error) {
 	err := env.Parse(&cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	fn := cfg.FileName
 	if len(fn) == 0 {
-		fn = flagf
+		fn = filename
 	}
 
 	if len(fn) != 0 {
@@ -169,7 +168,7 @@ func main() {
 	fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
 	flag.Parse()
 
-	fileStorage, err := Storage(*fileStoragePath)
+	fileStorage, err := NewStorage(*fileStoragePath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -187,12 +186,12 @@ func main() {
 	}
 
 	// зададим встроенные middleware, чтобы улучшить стабильность приложения
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.Compress(5))
-	r.Use(middlewares.Decompress)
+	r.Use(middleware.RequestID,
+		middleware.RealIP,
+		middleware.Logger,
+		middleware.Recoverer,
+		middleware.Compress(5),
+		middlewares.Decompress)
 
 	r.Post("/", getURLForCut(fileStorage, *baseURL))
 	r.Get("/{id}", redirectTo(fileStorage))
