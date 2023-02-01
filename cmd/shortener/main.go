@@ -76,10 +76,10 @@ func redirectTo(s storage.Storage) func(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 
-		if initialURL == "" {
-			http.Error(w, "URl not in storage", http.StatusBadRequest)
-			return
-		}
+		//if initialURL == "" {
+		//	http.Error(w, "URl not in storage", http.StatusBadRequest)
+		//	return
+		//}
 
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("Location", initialURL)
@@ -176,10 +176,10 @@ func main() {
 
 	r := chi.NewRouter()
 
-	err = env.Parse(&cfg)
-	if err != nil {
-		log.Fatal(err)
-	}
+	//err = env.Parse(&cfg)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
 
 	ServerAddr := cfg.ServerAddress
 	if len(ServerAddr) == 0 {
