@@ -81,7 +81,7 @@ type Res struct {
 	Result string `json:"result"`
 }
 
-func shorten(s storage.Storage, flag1 string) func(w http.ResponseWriter, r *http.Request) {
+func shorten(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -98,7 +98,6 @@ func shorten(s storage.Storage, flag1 string) func(w http.ResponseWriter, r *htt
 		urlForCuts := u.URL
 
 		shortLink := utils.GenerateRandomString()
-		//shortURL := "http://" + getHost + "/" + shortLink
 		shortURL := cfg.BaseURL + "/" + shortLink
 
 		//записываем в мапу пару shortLink:оригинальная ссылка
@@ -169,7 +168,7 @@ func main() {
 	r.Post("/", getURLForCut(fileStorage))
 	r.Get("/{id}", redirectTo(fileStorage))
 	r.Get("/", notFoundFunc)
-	r.Post("/api/shorten", shorten(fileStorage, *baseURL))
+	r.Post("/api/shorten", shorten(fileStorage))
 
 	log.Fatal(http.ListenAndServe(ServerAddr, r))
 }
