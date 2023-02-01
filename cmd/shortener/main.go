@@ -38,12 +38,6 @@ func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request
 
 		urlForCuts := string(bodyData)
 
-		//BaseURL := cfg.BaseURL
-
-		//if len(BaseURL) == 0 {
-		//	BaseURL = flagb
-		//}
-
 		shortLink := utils.GenerateRandomString()
 		shortURL := cfg.BaseURL + "/" + shortLink
 
@@ -53,8 +47,6 @@ func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request
 			http.Error(w, err.Error(), 400)
 			return
 		}
-
-		//fmt.Println(storage.URLStorage{})
 
 		w.Write([]byte(shortURL))
 	}
@@ -75,11 +67,6 @@ func redirectTo(s storage.Storage) func(w http.ResponseWriter, r *http.Request) 
 			http.Error(w, err.Error(), 400)
 			return
 		}
-
-		//if initialURL == "" {
-		//	http.Error(w, "URl not in storage", http.StatusBadRequest)
-		//	return
-		//}
 
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("Location", initialURL)
@@ -111,14 +98,14 @@ func shorten(s storage.Storage, flag1 string) func(w http.ResponseWriter, r *htt
 		//получаю из хранилища результат
 		urlForCuts := u.URL
 
-		BaseURL := cfg.BaseURL
-		if len(BaseURL) == 0 {
-			BaseURL = flag1
-		}
+		//BaseURL := cfg.BaseURL
+		//if len(BaseURL) == 0 {
+		//	BaseURL = flag1
+		//}
 
 		shortLink := utils.GenerateRandomString()
 		//shortURL := "http://" + getHost + "/" + shortLink
-		shortURL := BaseURL + "/" + shortLink
+		shortURL := cfg.BaseURL + "/" + shortLink
 
 		//записываем в мапу пару shortLink:оригинальная ссылка
 		err = s.PutURL(shortLink, urlForCuts)
@@ -141,9 +128,6 @@ func NewStorage(fileName string) (storage.Storage, error) {
 	if len(fileName) != 0 {
 		fileStorage, err := storage.NewFileStorage(fileName)
 
-		//if err := env.Parse(&cfg); err != nil {
-		//	return nil, fmt.Errorf("unable to parse env: %w", err)
-		//}
 		return fileStorage, err
 	} else {
 		fileStorage := storage.NewMemStorage()
@@ -175,11 +159,6 @@ func main() {
 	}
 
 	r := chi.NewRouter()
-
-	//err = env.Parse(&cfg)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
 
 	ServerAddr := cfg.ServerAddress
 	if len(ServerAddr) == 0 {
