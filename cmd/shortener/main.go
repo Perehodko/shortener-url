@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"github.com/Perehodko/shortener-url/internal/middlewares"
 	"github.com/Perehodko/shortener-url/internal/storage"
 	"github.com/Perehodko/shortener-url/internal/utils"
@@ -23,7 +22,7 @@ type Config struct {
 
 var cfg Config
 
-func getURLForCut(s storage.Storage, flagb string) func(w http.ResponseWriter, r *http.Request) {
+func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusCreated)
@@ -39,14 +38,14 @@ func getURLForCut(s storage.Storage, flagb string) func(w http.ResponseWriter, r
 
 		urlForCuts := string(bodyData)
 
-		BaseURL := cfg.BaseURL
+		//BaseURL := cfg.BaseURL
 
-		if len(BaseURL) == 0 {
-			BaseURL = flagb
-		}
+		//if len(BaseURL) == 0 {
+		//	BaseURL = flagb
+		//}
 
 		shortLink := utils.GenerateRandomString()
-		shortURL := BaseURL + "/" + shortLink
+		shortURL := cfg.BaseURL + "/" + shortLink
 
 		//записываем в мапу пару shortLink:оригинальная ссылка
 		err = s.PutURL(shortLink, urlForCuts)
@@ -142,9 +141,9 @@ func NewStorage(fileName string) (storage.Storage, error) {
 	if len(fileName) != 0 {
 		fileStorage, err := storage.NewFileStorage(fileName)
 
-		if err := env.Parse(&cfg); err != nil {
-			return nil, fmt.Errorf("unable to parse env: %w", err)
-		}
+		//if err := env.Parse(&cfg); err != nil {
+		//	return nil, fmt.Errorf("unable to parse env: %w", err)
+		//}
 		return fileStorage, err
 	} else {
 		fileStorage := storage.NewMemStorage()
@@ -158,17 +157,19 @@ func main() {
 	fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
 	flag.Parse()
 
+	// вставляем в структуру cfg значения из флагов
+	cfg.ServerAddress = *severAddress
+	cfg.BaseURL = *baseURL
+	cfg.FileName = *fileStoragePath
+
+	// перезатираем их значениями энвов
+	// если значения в энве для поля структуры нет - то в поле останется значение из флага
 	err := env.Parse(&cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fn := cfg.FileName
-	if len(fn) == 0 {
-		fn = *fileStoragePath
-	}
-
-	fileStorage, err := NewStorage(fn)
+	fileStorage, err := NewStorage(cfg.FileName)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -193,7 +194,7 @@ func main() {
 		middleware.Compress(5),
 		middlewares.Decompress)
 
-	r.Post("/", getURLForCut(fileStorage, *baseURL))
+	r.Post("/", getURLForCut(fileStorage))
 	r.Get("/{id}", redirectTo(fileStorage))
 	r.Get("/", notFoundFunc)
 	r.Post("/api/shorten", shorten(fileStorage, *baseURL))
