@@ -47,7 +47,6 @@ func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request
 			http.Error(w, err.Error(), 400)
 			return
 		}
-
 		w.Write([]byte(shortURL))
 	}
 }
@@ -98,11 +97,6 @@ func shorten(s storage.Storage, flag1 string) func(w http.ResponseWriter, r *htt
 		//получаю из хранилища результат
 		urlForCuts := u.URL
 
-		//BaseURL := cfg.BaseURL
-		//if len(BaseURL) == 0 {
-		//	BaseURL = flag1
-		//}
-
 		shortLink := utils.GenerateRandomString()
 		//shortURL := "http://" + getHost + "/" + shortLink
 		shortURL := cfg.BaseURL + "/" + shortLink
@@ -127,7 +121,6 @@ func shorten(s storage.Storage, flag1 string) func(w http.ResponseWriter, r *htt
 func NewStorage(fileName string) (storage.Storage, error) {
 	if len(fileName) != 0 {
 		fileStorage, err := storage.NewFileStorage(fileName)
-
 		return fileStorage, err
 	} else {
 		fileStorage := storage.NewMemStorage()
