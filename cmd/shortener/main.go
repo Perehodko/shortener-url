@@ -14,7 +14,6 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
 	"io"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
@@ -167,11 +166,11 @@ func NewStorage(fileName string) (storage.Storage, error) {
 }
 
 func checkKeyAndRead() string {
-	filePath := "/Users/nperekhodko/Desktop/I/yandex_precticum/shortener-url/cmd/shortener/"
+	fileDirectory := "/Users/nperekhodko/Desktop/I/yandex_precticum/shortener-url/cmd/shortener/"
 	fileName := "key.txt"
-	if _, err := os.Stat(filePath + fileName); err == nil {
+	if _, err := os.Stat(fileDirectory + fileName); err == nil {
 		// path/to/whatever exists
-		file, err := os.Open(filePath + fileName)
+		file, err := os.Open(fileDirectory + fileName)
 
 		if err != nil {
 			log.Fatal(err)
@@ -181,7 +180,9 @@ func checkKeyAndRead() string {
 				log.Fatal(err)
 			}
 		}()
-		keyFromFile, err := ioutil.ReadAll(file)
+		buf := make([]byte, 1024)
+		keyFromFile, err := file.Read(buf)
+		//fmt.Println("с и без стр", keyFromFile, string(keyFromFile))
 		return string(keyFromFile)
 	} else if errors.Is(err, os.ErrNotExist) {
 		// path/to/whatever does *not* exist
@@ -200,7 +201,7 @@ func writeToFile(key string) {
 	}
 	defer f.Close()
 
-	_, err2 := f.WriteString(key)
+	_, err2 := f.Write([]byte(key))
 
 	if err2 != nil {
 		log.Fatal(err2)
@@ -219,6 +220,7 @@ func generateKey() (string, error) {
 	//2 константа aes.BlockSize определяет размер блока и равна 16 байтам
 	// будем использовать AES256, создав ключ длиной 32 байта
 	key, err := generateRandom(aes.BlockSize) // ключ шифрования
+	fmt.Println("crypto key", key)
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
 		return "", err
@@ -233,7 +235,7 @@ func generateKey() (string, error) {
 	encryptedUUID := make([]byte, aes.BlockSize)
 	aesblock.Encrypt(encryptedUUID, uuidByte)
 	fmt.Printf("encrypted: %x\n", encryptedUUID)
-	fmt.Printf("encrypted string: %x\n", string(encryptedUUID))
+	fmt.Println("encrypted string: ", string(encryptedUUID))
 
 	return string(encryptedUUID), nil
 }
