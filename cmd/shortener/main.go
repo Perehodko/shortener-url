@@ -1,16 +1,20 @@
 package main
 
 import (
+	"crypto/aes"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"github.com/Perehodko/shortener-url/internal/middlewares"
 	"github.com/Perehodko/shortener-url/internal/storage"
 	"github.com/Perehodko/shortener-url/internal/utils"
 	"github.com/caarlos0/env/v6"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/google/uuid"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 )
 
@@ -22,10 +26,53 @@ type Config struct {
 
 var cfg Config
 
+func generateRandom(size int) ([]byte, error) {
+	b := make([]byte, size)
+	_, err := rand.Read(b)
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
+}
+
 func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusCreated)
+
+		//cookie
+		uuid := uuid.New()
+		fmt.Println(uuid.String(), "uuid")
+
+		//подписываю куки
+		//1 перевожу в байты
+		uuidByte := []byte(uuid.String()) // данные, которые хотим зашифровать
+		//2 константа aes.BlockSize определяет размер блока и равна 16 байтам
+		// будем использовать AES256, создав ключ длиной 32 байта
+		key, err := generateRandom(aes.BlockSize) // ключ шифрования
+		if err != nil {
+			fmt.Printf("error: %v\n", err)
+			return
+		}
+		//3 получаем cipher.Block
+		aesblock, err := aes.NewCipher(key)
+		if err != nil {
+			fmt.Printf("error: %v\n", err)
+			return
+		}
+		//4 зашифровываем
+		encryptedUUID := make([]byte, aes.BlockSize)
+		aesblock.Encrypt(encryptedUUID, uuidByte)
+		fmt.Printf("encrypted: %x\n", encryptedUUID)
+
+		cookie := http.Cookie{Name: "session", Value: string(encryptedUUID)}
+
+		http.SetCookie(w, &cookie)
+		fmt.Println(&cookie)
+
+		//k, err := r.Cookie("session")
+		//fmt.Println(k, "kkkkkkkkkkk")
 
 		// читаем Body
 		defer r.Body.Close()
@@ -128,6 +175,7 @@ func NewStorage(fileName string) (storage.Storage, error) {
 }
 
 func main() {
+
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
 	fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
