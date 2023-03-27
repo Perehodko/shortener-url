@@ -49,13 +49,31 @@ func checkCookieExist(r *http.Request) string {
 	return sessionCookie
 }
 
-func getURLForCut(s storage.Storage, encryptedUUID string) func(w http.ResponseWriter, r *http.Request) {
+func checkKeyIsValid(key []byte, encryptedUUID []byte, UUID string) bool {
+	// получаем cipher.Block
+	aesblock, err := aes.NewCipher(key)
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+	}
+
+	// расшифровываем
+	src2 := make([]byte, aes.BlockSize)
+	aesblock.Decrypt(src2, encryptedUUID)
+	fmt.Printf("decrypted: %s\n", src2)
+
+	if UUID == string(src2) {
+		return true
+	} else {
+		return false
+	}
+}
+
+func getURLForCut(s storage.Storage, encryptedUUID string, key string, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusCreated)
 
-		//fmt.Println("sessionCookie!!!!!!!!!!!!!!!!!", checkCookieExist(r))
-		if len(checkCookieExist(r)) == 0 {
+		if len(checkCookieExist(r)) == 0 || checkKeyIsValid([]byte(key), []byte(encryptedUUID), UUID) {
 			cookie := http.Cookie{
 				Name:  "session",
 				Value: encryptedUUID}
@@ -170,7 +188,7 @@ func checkKeyAndRead() string {
 	fileName := "key.txt"
 	if _, err := os.Stat(fileDirectory + fileName); err == nil {
 		// path/to/whatever exists
-		file, err := os.Open(fileDirectory + fileName)
+		file, err := os.OpenFile(fileDirectory+fileName, os.O_RDWR|os.O_CREATE, 0755)
 
 		if err != nil {
 			log.Fatal(err)
@@ -208,28 +226,26 @@ func writeToFile(key string) {
 	}
 }
 
-func generateKey() (string, error) {
+func generateKey() (string, error, string, string) {
 	//fmt.Println("currentCoockie", currentCoockie)
 	//cookie
-	uuid := uuid.New()
-	//fmt.Println(uuid.String(), "uuid")
+	UUID := uuid.New()
+	//fmt.Println(UUID.String(), "UUID")
 
 	//подписываю куки
 	//1 перевожу в байты
-	uuidByte := []byte(uuid.String()) // данные, которые хотим зашифровать
+	uuidByte := []byte(UUID.String()) // данные, которые хотим зашифровать
 	//2 константа aes.BlockSize определяет размер блока и равна 16 байтам
 	// будем использовать AES256, создав ключ длиной 32 байта
 	key, err := generateRandom(aes.BlockSize) // ключ шифрования
 	//fmt.Println("crypto key", key)
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
-		return "", err
 	}
 	//3 получаем cipher.Block
 	aesblock, err := aes.NewCipher(key)
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
-		return "", err
 	}
 	//4 зашифровываем
 	encryptedUUID := make([]byte, aes.BlockSize)
@@ -237,18 +253,19 @@ func generateKey() (string, error) {
 	//fmt.Printf("encrypted: %x\n", encryptedUUID)
 	//fmt.Println("encrypted string: ", string(encryptedUUID))
 
-	return string(encryptedUUID), nil
+	return string(encryptedUUID), nil, string(key), UUID.String()
 }
 
 func main() {
 	keyToFunc := ""
 
 	isKeyExist := checkKeyAndRead()
+	encryptedUUIDKey, _, key, UUID := generateKey()
+
 	if len(isKeyExist) == 0 {
-		key, _ := generateKey()
-		fmt.Println("key to write in file", key)
-		writeToFile(key)
-		keyToFunc = key
+		fmt.Println("encryptedUUIDKey to write in file", encryptedUUIDKey)
+		writeToFile(encryptedUUIDKey)
+		keyToFunc = encryptedUUIDKey
 	} else {
 		keyToFunc = isKeyExist
 	}
@@ -291,7 +308,7 @@ func main() {
 		middleware.Compress(5),
 		middlewares.Decompress)
 
-	r.Post("/", getURLForCut(fileStorage, keyToFunc))
+	r.Post("/", getURLForCut(fileStorage, keyToFunc, key, UUID))
 	r.Get("/{id}", redirectTo(fileStorage))
 	r.Get("/", notFoundFunc)
 	r.Post("/api/shorten", shorten(fileStorage))
