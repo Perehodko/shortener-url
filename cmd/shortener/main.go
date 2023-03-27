@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/aes"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/Perehodko/shortener-url/internal/middlewares"
@@ -13,9 +14,11 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
 	"io"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 )
 
 type Config struct {
@@ -36,43 +39,32 @@ func generateRandom(size int) ([]byte, error) {
 	return b, nil
 }
 
-func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
+func checkCookieExist(r *http.Request) string {
+	cookie, err := r.Cookie("session")
+	var sessionCookie string
+	if err == nil {
+		sessionCookie = cookie.Value
+	} else if err != http.ErrNoCookie {
+		log.Println(err)
+	}
+	return sessionCookie
+}
+
+func getURLForCut(s storage.Storage, encryptedUUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusCreated)
 
-		//cookie
-		uuid := uuid.New()
-		fmt.Println(uuid.String(), "uuid")
+		//fmt.Println("sessionCookie!!!!!!!!!!!!!!!!!", checkCookieExist(r))
+		if len(checkCookieExist(r)) == 0 {
+			cookie := http.Cookie{
+				Name:  "session",
+				Value: encryptedUUID}
 
-		//подписываю куки
-		//1 перевожу в байты
-		uuidByte := []byte(uuid.String()) // данные, которые хотим зашифровать
-		//2 константа aes.BlockSize определяет размер блока и равна 16 байтам
-		// будем использовать AES256, создав ключ длиной 32 байта
-		key, err := generateRandom(aes.BlockSize) // ключ шифрования
-		if err != nil {
-			fmt.Printf("error: %v\n", err)
-			return
+			http.SetCookie(w, &cookie)
+			//отладка
+			fmt.Println(&cookie, "&cookie")
 		}
-		//3 получаем cipher.Block
-		aesblock, err := aes.NewCipher(key)
-		if err != nil {
-			fmt.Printf("error: %v\n", err)
-			return
-		}
-		//4 зашифровываем
-		encryptedUUID := make([]byte, aes.BlockSize)
-		aesblock.Encrypt(encryptedUUID, uuidByte)
-		fmt.Printf("encrypted: %x\n", encryptedUUID)
-
-		cookie := http.Cookie{Name: "session", Value: string(encryptedUUID)}
-
-		http.SetCookie(w, &cookie)
-		fmt.Println(&cookie)
-
-		//k, err := r.Cookie("session")
-		//fmt.Println(k, "kkkkkkkkkkk")
 
 		// читаем Body
 		defer r.Body.Close()
@@ -174,7 +166,91 @@ func NewStorage(fileName string) (storage.Storage, error) {
 	}
 }
 
+func checkKeyAndRead() string {
+	filePath := "/Users/nperekhodko/Desktop/I/yandex_precticum/shortener-url/cmd/shortener/"
+	fileName := "key.txt"
+	if _, err := os.Stat(filePath + fileName); err == nil {
+		// path/to/whatever exists
+		file, err := os.Open(filePath + fileName)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer func() {
+			if err = file.Close(); err != nil {
+				log.Fatal(err)
+			}
+		}()
+		keyFromFile, err := ioutil.ReadAll(file)
+		return string(keyFromFile)
+	} else if errors.Is(err, os.ErrNotExist) {
+		// path/to/whatever does *not* exist
+		return ""
+	}
+	return ""
+}
+
+func writeToFile(key string) {
+	filePath := "/Users/nperekhodko/Desktop/I/yandex_precticum/shortener-url/cmd/shortener/"
+	fileName := "key.txt"
+	f, err := os.Create(filePath + fileName)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+
+	_, err2 := f.WriteString(key)
+
+	if err2 != nil {
+		log.Fatal(err2)
+	}
+}
+
+func generateKey() (string, error) {
+	//fmt.Println("currentCoockie", currentCoockie)
+	//cookie
+	uuid := uuid.New()
+	fmt.Println(uuid.String(), "uuid")
+
+	//подписываю куки
+	//1 перевожу в байты
+	uuidByte := []byte(uuid.String()) // данные, которые хотим зашифровать
+	//2 константа aes.BlockSize определяет размер блока и равна 16 байтам
+	// будем использовать AES256, создав ключ длиной 32 байта
+	key, err := generateRandom(aes.BlockSize) // ключ шифрования
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+		return "", err
+	}
+	//3 получаем cipher.Block
+	aesblock, err := aes.NewCipher(key)
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+		return "", err
+	}
+	//4 зашифровываем
+	encryptedUUID := make([]byte, aes.BlockSize)
+	aesblock.Encrypt(encryptedUUID, uuidByte)
+	fmt.Printf("encrypted: %x\n", encryptedUUID)
+	fmt.Printf("encrypted string: %x\n", string(encryptedUUID))
+
+	return string(encryptedUUID), nil
+}
+
 func main() {
+	keyToFunc := ""
+
+	isKeyExist := checkKeyAndRead()
+	if len(isKeyExist) == 0 {
+		key, _ := generateKey()
+		fmt.Println("key to write in file", key)
+		writeToFile(key)
+		keyToFunc = key
+	} else {
+		keyToFunc = isKeyExist
+	}
+	fmt.Println("keyToFunc", keyToFunc)
 
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
@@ -213,7 +289,7 @@ func main() {
 		middleware.Compress(5),
 		middlewares.Decompress)
 
-	r.Post("/", getURLForCut(fileStorage))
+	r.Post("/", getURLForCut(fileStorage, keyToFunc))
 	r.Get("/{id}", redirectTo(fileStorage))
 	r.Get("/", notFoundFunc)
 	r.Post("/api/shorten", shorten(fileStorage))
