@@ -62,7 +62,7 @@ func getURLForCut(s storage.Storage, encryptedUUID string) func(w http.ResponseW
 
 			http.SetCookie(w, &cookie)
 			//отладка
-			fmt.Println(&cookie, "&cookie")
+			//fmt.Println(&cookie, "&cookie")
 		}
 
 		// читаем Body
@@ -212,7 +212,7 @@ func generateKey() (string, error) {
 	//fmt.Println("currentCoockie", currentCoockie)
 	//cookie
 	uuid := uuid.New()
-	fmt.Println(uuid.String(), "uuid")
+	//fmt.Println(uuid.String(), "uuid")
 
 	//подписываю куки
 	//1 перевожу в байты
@@ -220,7 +220,7 @@ func generateKey() (string, error) {
 	//2 константа aes.BlockSize определяет размер блока и равна 16 байтам
 	// будем использовать AES256, создав ключ длиной 32 байта
 	key, err := generateRandom(aes.BlockSize) // ключ шифрования
-	fmt.Println("crypto key", key)
+	//fmt.Println("crypto key", key)
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
 		return "", err
@@ -234,8 +234,8 @@ func generateKey() (string, error) {
 	//4 зашифровываем
 	encryptedUUID := make([]byte, aes.BlockSize)
 	aesblock.Encrypt(encryptedUUID, uuidByte)
-	fmt.Printf("encrypted: %x\n", encryptedUUID)
-	fmt.Println("encrypted string: ", string(encryptedUUID))
+	//fmt.Printf("encrypted: %x\n", encryptedUUID)
+	//fmt.Println("encrypted string: ", string(encryptedUUID))
 
 	return string(encryptedUUID), nil
 }
@@ -252,7 +252,7 @@ func main() {
 	} else {
 		keyToFunc = isKeyExist
 	}
-	fmt.Println("keyToFunc", keyToFunc)
+	//fmt.Println("keyToFunc", keyToFunc)
 
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
