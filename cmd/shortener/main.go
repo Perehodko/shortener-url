@@ -257,18 +257,19 @@ func generateKey() (string, error, string, string) {
 }
 
 func main() {
-	keyToFunc := ""
+	//keyToFunc := ""
+	//
+	//isKeyExist := checkKeyAndRead()
 
-	isKeyExist := checkKeyAndRead()
 	encryptedUUIDKey, _, key, UUID := generateKey()
-
-	if len(isKeyExist) == 0 {
-		fmt.Println("encryptedUUIDKey to write in file", encryptedUUIDKey)
-		writeToFile(encryptedUUIDKey)
-		keyToFunc = encryptedUUIDKey
-	} else {
-		keyToFunc = isKeyExist
-	}
+	keyToFunc := encryptedUUIDKey
+	//if len(isKeyExist) == 0 {
+	//	fmt.Println("encryptedUUIDKey to write in file", encryptedUUIDKey)
+	//	writeToFile(encryptedUUIDKey)
+	//	keyToFunc = encryptedUUIDKey
+	//} else {
+	//	keyToFunc = isKeyExist
+	//}
 	//fmt.Println("keyToFunc", keyToFunc)
 
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
