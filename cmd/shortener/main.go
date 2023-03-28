@@ -71,7 +71,7 @@ func getURLForCut(s storage.Storage, encryptedUUID string, key string, UUID stri
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusCreated)
 
-		if len(checkCookieExist(r)) == 0 || checkKeyIsValid([]byte(key), []byte(encryptedUUID), UUID) {
+		if len(checkCookieExist(r)) == 0 || !checkKeyIsValid([]byte(key), []byte(encryptedUUID), UUID) {
 			cookie := http.Cookie{
 				Name:  "session",
 				Value: encryptedUUID}
@@ -251,6 +251,7 @@ func main() {
 	r.Get("/{id}", redirectTo(fileStorage))
 	r.Get("/", notFoundFunc)
 	r.Post("/api/shorten", shorten(fileStorage))
+	//r.Get("/api/user/urls", doSmth)
 
 	log.Fatal(http.ListenAndServe(ServerAddr, r))
 }
