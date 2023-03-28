@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/aes"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"github.com/Perehodko/shortener-url/internal/middlewares"
@@ -17,7 +16,6 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
-	"os"
 )
 
 type Config struct {
@@ -183,48 +181,48 @@ func NewStorage(fileName string) (storage.Storage, error) {
 	}
 }
 
-func checkKeyAndRead() string {
-	fileDirectory := "/Users/nperekhodko/Desktop/I/yandex_precticum/shortener-url/cmd/shortener/"
-	fileName := "key.txt"
-	if _, err := os.Stat(fileDirectory + fileName); err == nil {
-		// path/to/whatever exists
-		file, err := os.OpenFile(fileDirectory+fileName, os.O_RDWR|os.O_CREATE, 0755)
+//func checkKeyAndRead() string {
+//	fileDirectory := "/Users/nperekhodko/Desktop/I/yandex_precticum/shortener-url/cmd/shortener/"
+//	fileName := "key.txt"
+//	if _, err := os.Stat(fileDirectory + fileName); err == nil {
+//		// path/to/whatever exists
+//		file, err := os.OpenFile(fileDirectory+fileName, os.O_RDWR|os.O_CREATE, 0755)
+//
+//		if err != nil {
+//			log.Fatal(err)
+//		}
+//		defer func() {
+//			if err = file.Close(); err != nil {
+//				log.Fatal(err)
+//			}
+//		}()
+//		buf := make([]byte, 1024)
+//		keyFromFile, err := file.Read(buf)
+//		//fmt.Println("с и без стр", keyFromFile, string(keyFromFile))
+//		return string(keyFromFile)
+//	} else if errors.Is(err, os.ErrNotExist) {
+//		// path/to/whatever does *not* exist
+//		return ""
+//	}
+//	return ""
+//}
 
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer func() {
-			if err = file.Close(); err != nil {
-				log.Fatal(err)
-			}
-		}()
-		buf := make([]byte, 1024)
-		keyFromFile, err := file.Read(buf)
-		//fmt.Println("с и без стр", keyFromFile, string(keyFromFile))
-		return string(keyFromFile)
-	} else if errors.Is(err, os.ErrNotExist) {
-		// path/to/whatever does *not* exist
-		return ""
-	}
-	return ""
-}
-
-func writeToFile(key string) {
-	filePath := "/Users/nperekhodko/Desktop/I/yandex_precticum/shortener-url/cmd/shortener/"
-	fileName := "key.txt"
-	f, err := os.Create(filePath + fileName)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-
-	_, err2 := f.Write([]byte(key))
-
-	if err2 != nil {
-		log.Fatal(err2)
-	}
-}
+//func writeToFile(key string) {
+//	filePath := "/Users/nperekhodko/Desktop/I/yandex_precticum/shortener-url/cmd/shortener/"
+//	fileName := "key.txt"
+//	f, err := os.Create(filePath + fileName)
+//
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	defer f.Close()
+//
+//	_, err2 := f.Write([]byte(key))
+//
+//	if err2 != nil {
+//		log.Fatal(err2)
+//	}
+//}
 
 func generateKey() (string, error, string, string) {
 	//fmt.Println("currentCoockie", currentCoockie)
