@@ -181,54 +181,9 @@ func NewStorage(fileName string) (storage.Storage, error) {
 	}
 }
 
-//func checkKeyAndRead() string {
-//	fileDirectory := "/Users/nperekhodko/Desktop/I/yandex_precticum/shortener-url/cmd/shortener/"
-//	fileName := "key.txt"
-//	if _, err := os.Stat(fileDirectory + fileName); err == nil {
-//		// path/to/whatever exists
-//		file, err := os.OpenFile(fileDirectory+fileName, os.O_RDWR|os.O_CREATE, 0755)
-//
-//		if err != nil {
-//			log.Fatal(err)
-//		}
-//		defer func() {
-//			if err = file.Close(); err != nil {
-//				log.Fatal(err)
-//			}
-//		}()
-//		buf := make([]byte, 1024)
-//		keyFromFile, err := file.Read(buf)
-//		//fmt.Println("с и без стр", keyFromFile, string(keyFromFile))
-//		return string(keyFromFile)
-//	} else if errors.Is(err, os.ErrNotExist) {
-//		// path/to/whatever does *not* exist
-//		return ""
-//	}
-//	return ""
-//}
-
-//func writeToFile(key string) {
-//	filePath := "/Users/nperekhodko/Desktop/I/yandex_precticum/shortener-url/cmd/shortener/"
-//	fileName := "key.txt"
-//	f, err := os.Create(filePath + fileName)
-//
-//	if err != nil {
-//		log.Fatal(err)
-//	}
-//	defer f.Close()
-//
-//	_, err2 := f.Write([]byte(key))
-//
-//	if err2 != nil {
-//		log.Fatal(err2)
-//	}
-//}
-
 func generateKey() (string, error, string, string) {
-	//fmt.Println("currentCoockie", currentCoockie)
-	//cookie
 	UUID := uuid.New()
-	//fmt.Println(UUID.String(), "UUID")
+	//fmt.Println(UUID.String(), UUID")
 
 	//подписываю куки
 	//1 перевожу в байты
@@ -248,27 +203,12 @@ func generateKey() (string, error, string, string) {
 	//4 зашифровываем
 	encryptedUUID := make([]byte, aes.BlockSize)
 	aesblock.Encrypt(encryptedUUID, uuidByte)
-	//fmt.Printf("encrypted: %x\n", encryptedUUID)
-	//fmt.Println("encrypted string: ", string(encryptedUUID))
-
 	return string(encryptedUUID), nil, string(key), UUID.String()
 }
 
 func main() {
-	//keyToFunc := ""
-	//
-	//isKeyExist := checkKeyAndRead()
-
 	encryptedUUIDKey, _, key, UUID := generateKey()
 	keyToFunc := encryptedUUIDKey
-	//if len(isKeyExist) == 0 {
-	//	fmt.Println("encryptedUUIDKey to write in file", encryptedUUIDKey)
-	//	writeToFile(encryptedUUIDKey)
-	//	keyToFunc = encryptedUUIDKey
-	//} else {
-	//	keyToFunc = isKeyExist
-	//}
-	//fmt.Println("keyToFunc", keyToFunc)
 
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
