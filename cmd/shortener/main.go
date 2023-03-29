@@ -96,8 +96,8 @@ func getURLForCut(s storage.Storage, encryptedUUID string, key string, UUID stri
 		shortURL := cfg.BaseURL + "/" + shortLink
 
 		//записываем в мапу пару shortLink:оригинальная ссылка
-		//err = s.PutURL(shortLink, urlForCuts)
-		err = s.PutURL(encryptedUUID, shortURL, urlForCuts)
+		err = s.PutURL(shortLink, urlForCuts)
+		//err = s.PutURL(encryptedUUID, shortURL, urlForCuts)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 			return
@@ -114,9 +114,10 @@ func notFoundFunc(w http.ResponseWriter, r *http.Request) {
 
 func redirectTo(s storage.Storage, encryptedUUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		//shortURL := chi.URLParam(r, "id")
+		shortURL := chi.URLParam(r, "id")
 
-		initialURL, err := s.GetURL(encryptedUUID)
+		//initialURL, err := s.GetURL(encryptedUUID)
+		initialURL, err := s.GetURL(shortURL)
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -162,8 +163,8 @@ func shorten(s storage.Storage, encryptedUUID string) func(w http.ResponseWriter
 		shortURL := cfg.BaseURL + "/" + shortLink
 
 		//записываем в мапу пару shortLink:оригинальная ссылка
-		//err = s.PutURL(shortLink, urlForCuts)
-		err = s.PutURL(encryptedUUID, shortURL, urlForCuts)
+		err = s.PutURL(shortLink, urlForCuts)
+		//err = s.PutURL(encryptedUUID, shortURL, urlForCuts)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 			return
