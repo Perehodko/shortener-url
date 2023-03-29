@@ -24,7 +24,7 @@ func (s *URLStorage) GetURL(uid string) (string, error) {
 	if len(s.URLs[uid]) == 0 {
 		return "", errors.New("in map no shortURL from request")
 	} else {
-		initialURL := s.URLs[uid][1]
+		initialURL := s.URLs[uid][0]
 		return initialURL, nil
 	}
 }
