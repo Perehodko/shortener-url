@@ -96,7 +96,8 @@ func getURLForCut(s storage.Storage, encryptedUUID string, key string, UUID stri
 		shortURL := cfg.BaseURL + "/" + shortLink
 
 		//записываем в мапу пару shortLink:оригинальная ссылка
-		err = s.PutURL(shortLink, urlForCuts)
+		//err = s.PutURL(shortLink, urlForCuts)
+		err = s.PutURL(encryptedUUID, shortURL, urlForCuts)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 			return
@@ -111,13 +112,14 @@ func notFoundFunc(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Not found"))
 }
 
-func redirectTo(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
+func redirectTo(s storage.Storage, encryptedUUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		shortURL := chi.URLParam(r, "id")
-		initialURL, err := s.GetURL(shortURL)
+		//shortURL := chi.URLParam(r, "id")
+
+		initialURL, err := s.GetURL(encryptedUUID)
 
 		if err != nil {
-			http.Error(w, err.Error(), 400)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -135,7 +137,12 @@ type Res struct {
 	Result string `json:"result"`
 }
 
-func shorten(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
+type ResShortLongLink struct {
+	shortLink string `json:"short_url"`
+	longLink  string `json:"original_url"`
+}
+
+func shorten(s storage.Storage, encryptedUUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -155,7 +162,8 @@ func shorten(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
 		shortURL := cfg.BaseURL + "/" + shortLink
 
 		//записываем в мапу пару shortLink:оригинальная ссылка
-		err = s.PutURL(shortLink, urlForCuts)
+		//err = s.PutURL(shortLink, urlForCuts)
+		err = s.PutURL(encryptedUUID, shortURL, urlForCuts)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 			return
@@ -206,6 +214,30 @@ func generateKey() (string, error, string, string) {
 	return string(encryptedUUID), nil, string(key), UUID.String()
 }
 
+func doSmth(s storage.Storage, keyToFunc string) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		//	получаем userId из cookie запроса
+		userId, err := r.Cookie("session")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		fmt.Println(userId)
+
+		//tx := Res{Result: shortURL}
+		//
+		//// преобразуем tx в JSON-формат
+		//txBz, err := json.Marshal(tx)
+		//if err != nil {
+		//	http.Error(w, err.Error(), http.StatusInternalServerError)
+		//}
+		//w.Write(txBz)
+
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusTemporaryRedirect)
+	}
+}
+
 func main() {
 	encryptedUUIDKey, _, key, UUID := generateKey()
 	keyToFunc := encryptedUUIDKey
@@ -248,10 +280,10 @@ func main() {
 		middlewares.Decompress)
 
 	r.Post("/", getURLForCut(fileStorage, keyToFunc, key, UUID))
-	r.Get("/{id}", redirectTo(fileStorage))
+	r.Get("/{id}", redirectTo(fileStorage, keyToFunc))
 	r.Get("/", notFoundFunc)
-	r.Post("/api/shorten", shorten(fileStorage))
-	//r.Get("/api/user/urls", doSmth)
+	r.Post("/api/shorten", shorten(fileStorage, keyToFunc))
+	r.Get("/api/user/urls", doSmth(fileStorage, keyToFunc))
 
 	log.Fatal(http.ListenAndServe(ServerAddr, r))
 }
