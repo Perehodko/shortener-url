@@ -27,7 +27,12 @@ type Storage interface {
 //    }
 
 func (s *URLStorage) PutURL(uid, shortLink, urlForCuts string) error {
-	s.URLs[uid] = map[string]string{}
+	//s.URLs[uid] = map[string]string{}
+	//s.URLs[uid][shortLink] = urlForCuts
+	if _, ok := s.URLs[uid]; !ok {
+		s.URLs[uid] = map[string]string{}
+	}
+
 	s.URLs[uid][shortLink] = urlForCuts
 	return nil
 }
