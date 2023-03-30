@@ -77,8 +77,6 @@ func getURLForCut(s storage.Storage, encryptedUUID string, key string, UUID stri
 				Value: encryptedUUID}
 
 			http.SetCookie(w, &cookie)
-			//отладка
-			//fmt.Println(&cookie, "&cookie")
 		}
 
 		// читаем Body
@@ -96,8 +94,8 @@ func getURLForCut(s storage.Storage, encryptedUUID string, key string, UUID stri
 		shortURL := cfg.BaseURL + "/" + shortLink
 
 		//записываем в мапу пару shortLink:оригинальная ссылка
-		err = s.PutURL(shortLink, urlForCuts)
-		//err = s.PutURL(encryptedUUID, shortURL, urlForCuts)
+		//err = s.PutURL(shortLink, urlForCuts)
+		err = s.PutURL(encryptedUUID, shortURL, urlForCuts)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 			return
@@ -117,7 +115,7 @@ func redirectTo(s storage.Storage, encryptedUUID string) func(w http.ResponseWri
 		shortURL := chi.URLParam(r, "id")
 
 		//initialURL, err := s.GetURL(encryptedUUID)
-		initialURL, err := s.GetURL(shortURL)
+		initialURL, err := s.GetURL(encryptedUUID, shortURL)
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -162,9 +160,8 @@ func shorten(s storage.Storage, encryptedUUID string) func(w http.ResponseWriter
 		shortLink := utils.GenerateRandomString()
 		shortURL := cfg.BaseURL + "/" + shortLink
 
-		//записываем в мапу пару shortLink:оригинальная ссылка
-		err = s.PutURL(shortLink, urlForCuts)
-		//err = s.PutURL(encryptedUUID, shortURL, urlForCuts)
+		//записываем в мапу encryptedUUID: [shortLink:urlForCuts]
+		err = s.PutURL(encryptedUUID, shortLink, urlForCuts)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 			return

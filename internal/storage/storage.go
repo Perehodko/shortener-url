@@ -9,53 +9,65 @@ import (
 )
 
 type Storage interface {
-	PutURL(shortLink, urlForCuts string) error
-	GetURL(shortURL string) (string, error)
+	PutURL(uid, shortLink, urlForCuts string) error
+	GetURL(uid, shortURL string) (string, error)
 	//PutURL(uid, shortLink, urlForCuts string) error
 	//GetURL(uid string) (string, error)
 }
 
-//
-//func (s *URLStorage) PutURL(uid, shortLink, urlForCuts string) error {
-//	s.URLs[uid] = append(s.URLs[uid], []string{shortLink, urlForCuts}...)
-//	return nil
-//}
-//
-//func (s *URLStorage) GetURL(uid string) (string, error) {
-//	if len(s.URLs[uid]) == 0 {
-//		return "", errors.New("in map no shortURL from request")
-//	} else {
-//		initialURL := s.URLs[uid][1]
-//		return initialURL, nil
-//	}
-//}
+//store := map[string]map[string]string{
+//        "uid1": {
+//            "CuzlE": "http://privet.com/test",
+//            "EMFwZ": "http://privet.com/test2",
+//        },
+//        "uid2": {
+//            "CuzlE": "http://privet.com/test",
+//            "EMFwZ": "http://privet.com/test2",
+//        },
+//    }
+
+func (s *URLStorage) PutURL(uid, shortLink, urlForCuts string) error {
+	s.URLs[uid] = map[string]string{}
+	s.URLs[uid][shortLink] = urlForCuts
+	return nil
+}
+
+func (s *URLStorage) GetURL(uid, shortLink string) (string, error) {
+	if len(s.URLs[uid]) == 0 {
+		return "", errors.New("in map no shortURL from request")
+	} else {
+		initialURL := s.URLs[uid][shortLink]
+		return initialURL, nil
+	}
+}
 
 type URLStorage struct {
-	URLs map[string]string
+	//URLs map[string]string
+	URLs map[string]map[string]string
 }
 
 // NewURLStore returns a new/empty URLStorage
 func NewURLStore() *URLStorage {
 	return &URLStorage{
-		URLs: make(map[string]string),
+		URLs: make(map[string]map[string]string),
 	}
 }
 
-func (s *URLStorage) PutURL(shortLink, urlForCuts string) error {
-	s.URLs[shortLink] = urlForCuts
-	return nil
-}
+//func (s *URLStorage) PutURL(shortLink, urlForCuts string) error {
+//	s.URLs[shortLink] = urlForCuts
+//	return nil
+//}
 
-func (s *URLStorage) GetURL(shortURL string) (string, error) {
-	initialURL, ok := s.URLs[shortURL]
-	if !ok {
-		return "", errors.New("in map no shortURL from request")
-	}
-	return initialURL, nil
-}
+//func (s *URLStorage) GetURL(shortURL string) (string, error) {
+//	initialURL, ok := s.URLs[shortURL]
+//	if !ok {
+//		return "", errors.New("in map no shortURL from request")
+//	}
+//	return initialURL, nil
+//}
 
 func NewMemStorage() *URLStorage { //  возвращаем интерфейс
-	return &URLStorage{URLs: make(map[string]string)}
+	return &URLStorage{URLs: make(map[string]map[string]string)}
 }
 
 // file
@@ -64,12 +76,12 @@ type FileStorage struct {
 	f  *os.File
 }
 
-func (fs *FileStorage) GetURL(key string) (value string, err error) {
-	return fs.ms.GetURL(key)
+func (fs *FileStorage) GetURL(uid, key string) (value string, err error) {
+	return fs.ms.GetURL(uid, key)
 }
 
-func (fs *FileStorage) PutURL(key, value string) (err error) {
-	if err = fs.ms.PutURL(key, value); err != nil {
+func (fs *FileStorage) PutURL(uid, key, value string) (err error) {
+	if err = fs.ms.PutURL(uid, key, value); err != nil {
 		return fmt.Errorf("unable to add new key in memorystorage: %w", err)
 	}
 
@@ -99,7 +111,7 @@ func NewFileStorage(filename string) (*FileStorage, error) { // и здесь м
 	}
 
 	// восстанавливаем данные из файла, мы будем их хранить в формате JSON
-	m := make(map[string]string)
+	m := make(map[string]map[string]string)
 	if err := json.NewDecoder(file).Decode(&m); err != nil && err != io.EOF { // проверка на io.EOF тк файл может быть пустой
 		return nil, fmt.Errorf("unable to decode contents of file %s: %w", filename, err)
 	}
