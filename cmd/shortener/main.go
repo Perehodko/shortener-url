@@ -75,7 +75,7 @@ func getURLForCut(s storage.Storage, encryptedUUID string, key string, UUID stri
 			cookie := http.Cookie{
 				Name:  "session",
 				Value: encryptedUUID}
-
+			fmt.Println("encryptedUUID", encryptedUUID, string(encryptedUUID))
 			http.SetCookie(w, &cookie)
 		}
 
@@ -116,6 +116,7 @@ func redirectTo(s storage.Storage, encryptedUUID string) func(w http.ResponseWri
 
 		//initialURL, err := s.GetURL(encryptedUUID)
 		initialURL, err := s.GetURL(encryptedUUID, shortURL)
+		fmt.Println("encryptedUUID", encryptedUUID)
 		fmt.Println("shortURL", shortURL)
 		fmt.Println("initialURL!!!!!!!!!!!!!!!!!!!!!!!!", initialURL)
 
@@ -138,26 +139,29 @@ type Res struct {
 	Result string `json:"result"`
 }
 
-type ResShortLongLink struct {
-	shortLink string `json:"short_url"`
-	longLink  string `json:"original_url"`
-}
+//type ResShortLongLink struct {
+//	shortLink string `json:"short_url"`
+//	longLink  string `json:"original_url"`
+//}
 
 func shorten(s storage.Storage, encryptedUUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-
 		w.WriteHeader(http.StatusCreated)
 
 		decoder := json.NewDecoder(r.Body)
 		var u URLStruct
 
+		fmt.Println("r.Body!!!", r.Body)
 		err := decoder.Decode(&u)
 		if err != nil {
-			panic(err)
+			//panic(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		//получаю из хранилища результат
 		urlForCuts := u.URL
+		fmt.Println("urlForCuts-shoren", urlForCuts)
 
 		shortLink := utils.GenerateRandomString()
 		shortURL := cfg.BaseURL + "/" + shortLink
@@ -191,11 +195,12 @@ func NewStorage(fileName string) (storage.Storage, error) {
 
 func generateKey() (string, error, string, string) {
 	UUID := uuid.New()
-	//fmt.Println(UUID.String(), UUID")
+	fmt.Println(UUID.String(), UUID)
 
 	//подписываю куки
 	//1 перевожу в байты
 	uuidByte := []byte(UUID.String()) // данные, которые хотим зашифровать
+
 	//2 константа aes.BlockSize определяет размер блока и равна 16 байтам
 	// будем использовать AES256, создав ключ длиной 32 байта
 	key, err := generateRandom(aes.BlockSize) // ключ шифрования
@@ -211,7 +216,11 @@ func generateKey() (string, error, string, string) {
 	//4 зашифровываем
 	encryptedUUID := make([]byte, aes.BlockSize)
 	aesblock.Encrypt(encryptedUUID, uuidByte)
-	return string(encryptedUUID), nil, string(key), UUID.String()
+	h := fmt.Sprintf("%x", encryptedUUID)
+	//fmt.Println("h", h)
+	//fmt.Printf("encrypted: %x", encryptedUUID)
+	//fmt.Println("string(encryptedUUID)", string(encryptedUUID[:]), "encryptedUUID", encryptedUUID)
+	return h, nil, string(key), UUID.String()
 }
 
 func doSmth(s storage.Storage, keyToFunc string) func(w http.ResponseWriter, r *http.Request) {
