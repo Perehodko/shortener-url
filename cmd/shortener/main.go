@@ -95,7 +95,7 @@ func getURLForCut(s storage.Storage, encryptedUUID string, key string, UUID stri
 
 		//записываем в мапу пару shortLink:оригинальная ссылка
 		//err = s.PutURL(shortLink, urlForCuts)
-		err = s.PutURL(encryptedUUID, shortURL, urlForCuts)
+		err = s.PutURL(encryptedUUID, shortLink, urlForCuts)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 			return
@@ -116,6 +116,8 @@ func redirectTo(s storage.Storage, encryptedUUID string) func(w http.ResponseWri
 
 		//initialURL, err := s.GetURL(encryptedUUID)
 		initialURL, err := s.GetURL(encryptedUUID, shortURL)
+		fmt.Println("shortURL", shortURL)
+		fmt.Println("initialURL!!!!!!!!!!!!!!!!!!!!!!!!", initialURL)
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
