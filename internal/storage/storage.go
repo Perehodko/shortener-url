@@ -11,24 +11,10 @@ import (
 type Storage interface {
 	PutURL(uid, shortLink, urlForCuts string) error
 	GetURL(uid, shortURL string) (string, error)
-	//PutURL(uid, shortLink, urlForCuts string) error
-	//GetURL(uid string) (string, error)
+	GetUserURLs(uid string) (map[string]string, error)
 }
 
-//store := map[string]map[string]string{
-//        "uid1": {
-//            "CuzlE": "http://privet.com/test",
-//            "EMFwZ": "http://privet.com/test2",
-//        },
-//        "uid2": {
-//            "CuzlE": "http://privet.com/test",
-//            "EMFwZ": "http://privet.com/test2",
-//        },
-//    }
-
 func (s *URLStorage) PutURL(uid, shortLink, urlForCuts string) error {
-	//s.URLs[uid] = map[string]string{}
-	//s.URLs[uid][shortLink] = urlForCuts
 	if _, ok := s.URLs[uid]; !ok {
 		s.URLs[uid] = map[string]string{}
 	}
@@ -46,6 +32,14 @@ func (s *URLStorage) GetURL(uid, shortLink string) (string, error) {
 	}
 }
 
+func (s *URLStorage) GetUserURLs(uid string) (map[string]string, error) {
+	if _, ok := s.URLs[uid]; !ok {
+		return map[string]string{}, errors.New("in map no shortURL from request")
+	} else {
+		return s.URLs[uid], nil
+	}
+}
+
 type URLStorage struct {
 	//URLs map[string]string
 	URLs map[string]map[string]string
@@ -58,19 +52,6 @@ func NewURLStore() *URLStorage {
 	}
 }
 
-//func (s *URLStorage) PutURL(shortLink, urlForCuts string) error {
-//	s.URLs[shortLink] = urlForCuts
-//	return nil
-//}
-
-//func (s *URLStorage) GetURL(shortURL string) (string, error) {
-//	initialURL, ok := s.URLs[shortURL]
-//	if !ok {
-//		return "", errors.New("in map no shortURL from request")
-//	}
-//	return initialURL, nil
-//}
-
 func NewMemStorage() *URLStorage { //  возвращаем интерфейс
 	return &URLStorage{URLs: make(map[string]map[string]string)}
 }
@@ -79,6 +60,10 @@ func NewMemStorage() *URLStorage { //  возвращаем интерфейс
 type FileStorage struct {
 	ms *URLStorage // сделаем внутреннюю хранилку в памяти тоже интерфейсом, на случай если захотим ее замокать
 	f  *os.File
+}
+
+func (fs *FileStorage) GetUserURLs(uid string) (map[string]string, error) {
+	return fs.ms.GetUserURLs(uid)
 }
 
 func (fs *FileStorage) GetURL(uid, key string) (value string, err error) {

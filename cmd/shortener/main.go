@@ -116,9 +116,6 @@ func redirectTo(s storage.Storage, encryptedUUID string) func(w http.ResponseWri
 
 		//initialURL, err := s.GetURL(encryptedUUID)
 		initialURL, err := s.GetURL(encryptedUUID, shortURL)
-		fmt.Println("encryptedUUID", encryptedUUID)
-		fmt.Println("shortURL", shortURL)
-		fmt.Println("initialURL!!!!!!!!!!!!!!!!!!!!!!!!", initialURL)
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -138,11 +135,6 @@ type URLStruct struct {
 type Res struct {
 	Result string `json:"result"`
 }
-
-//type ResShortLongLink struct {
-//	shortLink string `json:"short_url"`
-//	longLink  string `json:"original_url"`
-//}
 
 func shorten(s storage.Storage, encryptedUUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -216,34 +208,41 @@ func generateKey() (string, error, string, string) {
 	//4 зашифровываем
 	encryptedUUID := make([]byte, aes.BlockSize)
 	aesblock.Encrypt(encryptedUUID, uuidByte)
-	h := fmt.Sprintf("%x", encryptedUUID)
-	//fmt.Println("h", h)
-	//fmt.Printf("encrypted: %x", encryptedUUID)
-	//fmt.Println("string(encryptedUUID)", string(encryptedUUID[:]), "encryptedUUID", encryptedUUID)
-	return h, nil, string(key), UUID.String()
+	encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
+	return encryptedUUIDStr, nil, string(key), UUID.String()
 }
 
-func doSmth(s storage.Storage, keyToFunc string) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		//	получаем userId из cookie запроса
-		userId, err := r.Cookie("session")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		fmt.Println(userId)
+type ResUsersLinks struct {
+	shortLink string `json:"short_url"`
+	longLink  string `json:"original_url"`
+}
 
-		//tx := Res{Result: shortURL}
-		//
-		//// преобразуем tx в JSON-формат
-		//txBz, err := json.Marshal(tx)
-		//if err != nil {
-		//	http.Error(w, err.Error(), http.StatusInternalServerError)
-		//}
-		//w.Write(txBz)
+func doSmth(s storage.Storage, encryptedUUIDKey string) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		getUserURLs, err := s.GetUserURLs(encryptedUUIDKey)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		}
+		fmt.Println("getUserURLs", getUserURLs)
+
+		type M map[string]interface{}
+
+		var myMapSlice []M
+
+		for i, j := range getUserURLs {
+			res := M{"short_url": i, "original_url": j}
+			myMapSlice = append(myMapSlice, res)
+
+		}
+
+		// or you could use `json.Marshal(myMapSlice)` if you want
+		myJson, _ := json.MarshalIndent(myMapSlice, "", "    ")
+		fmt.Println(string(myJson))
+		w.Write(myJson)
 
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(http.StatusTemporaryRedirect)
+		w.WriteHeader(http.StatusOK)
 	}
 }
 
