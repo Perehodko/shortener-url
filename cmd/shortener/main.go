@@ -58,6 +58,8 @@ func checkKeyIsValid(key []byte, encryptedUUID []byte, UUID string) bool {
 	src2 := make([]byte, aes.BlockSize)
 	aesblock.Decrypt(src2, encryptedUUID)
 	fmt.Printf("decrypted: %s\n", src2)
+	encryptedUUIDStr := fmt.Sprintf("%x", src2)
+	fmt.Println("encryptedUUIDStr, UUID", encryptedUUIDStr, UUID)
 
 	fmt.Println("UUID == string(src2)???", UUID == string(src2))
 
@@ -214,14 +216,14 @@ func generateKey() (string, error, string, string) {
 	return encryptedUUIDStr, nil, string(key), UUID.String()
 }
 
-func doSmth(s storage.Storage, encryptedUUIDKey, key, UUID string) func(w http.ResponseWriter, r *http.Request) {
+func doSmth(s storage.Storage, encryptedUUIDKey string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		getUserURLs, err := s.GetUserURLs(encryptedUUIDKey)
 		fmt.Println("getUserURLs", getUserURLs, len(getUserURLs))
 
-		cookieIsValid := checkKeyIsValid([]byte(key), []byte(encryptedUUIDKey), UUID)
-		fmt.Println("cookieIsValid???", cookieIsValid)
-		if err != nil || len(getUserURLs) == 0 || !cookieIsValid {
+		//cookieIsValid := checkKeyIsValid([]byte(key), []byte(encryptedUUIDKey), UUID)
+		//fmt.Println("cookieIsValid???", cookieIsValid)
+		if err != nil || len(getUserURLs) == 0 {
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			w.WriteHeader(http.StatusNoContent)
 		} else {
@@ -291,7 +293,7 @@ func main() {
 	r.Get("/{id}", redirectTo(fileStorage, keyToFunc))
 	r.Get("/", notFoundFunc)
 	r.Post("/api/shorten", shorten(fileStorage, keyToFunc))
-	r.Get("/api/user/urls", doSmth(fileStorage, keyToFunc, key, UUID))
+	r.Get("/api/user/urls", doSmth(fileStorage, keyToFunc))
 
 	log.Fatal(http.ListenAndServe(ServerAddr, r))
 }
