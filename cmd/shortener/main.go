@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/aes"
+	"crypto/cipher"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -47,20 +48,36 @@ func checkCookieExist(r *http.Request) string {
 	return sessionCookie
 }
 
-func checkKeyIsValid(key []byte, encryptedUUID []byte, UUID string) bool {
+func checkKeyIsValid(key []byte, encryptedUUID []byte, UUID string, nonce []byte) bool {
+	//fmt.Println("checkKeyIsValid - encryptedUUID", encryptedUUID)
+	receive := fmt.Sprintf("%s", encryptedUUID)
+	fmt.Println("checkKeyIsValid - encryptedUUID", receive)
+
 	// получаем cipher.Block
 	aesblock, err := aes.NewCipher(key)
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
 	}
+	aesgcm, err := cipher.NewGCM(aesblock)
+	if err != nil {
+		panic(err)
+	}
 
-	// расшифровываем
-	src2 := make([]byte, aes.BlockSize)
-	aesblock.Decrypt(src2, encryptedUUID)
-	fmt.Printf("decrypted: %s\n", src2)
-	encryptedUUIDStr := fmt.Sprintf("%x", src2)
-	fmt.Println("encryptedUUIDStr, UUID", encryptedUUIDStr, UUID)
+	//dst := aesgcm.Seal(nil, nonce, []byte(UUID), nil) // зашифровываем
+	//fmt.Printf("encrypted: %x\n", dst)
+	//
+	//fmt.Println("receive, dst", encryptedUUID, dst)
+	//dst_2 := fmt.Sprintf("%s", dst)
+	//
+	//fmt.Println("receive, dst", receive, dst_2)
 
+	src2, err := aesgcm.Open(nil, nonce, encryptedUUID, nil) // расшифровываем
+	if err != nil {
+		fmt.Printf("error checkKeyIsValid: %v\n", err)
+	}
+	fmt.Println("расшифррованный UUID ", src2)
+	encryptedUUIDStr := fmt.Sprintf("%s", src2)
+	fmt.Println("расшифррованный UUID2 ", encryptedUUIDStr)
 	fmt.Println("UUID == string(src2)???", UUID == string(src2))
 
 	if UUID == string(src2) {
@@ -70,15 +87,17 @@ func checkKeyIsValid(key []byte, encryptedUUID []byte, UUID string) bool {
 	}
 }
 
-func getURLForCut(s storage.Storage, encryptedUUID string, key string, UUID string) func(w http.ResponseWriter, r *http.Request) {
+func getURLForCut(s storage.Storage, encryptedUUID []byte, key string, UUID string, nonce []byte) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusCreated)
 
-		if len(checkCookieExist(r)) == 0 || !checkKeyIsValid([]byte(key), []byte(encryptedUUID), UUID) {
+		encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
+
+		if len(checkCookieExist(r)) == 0 || !checkKeyIsValid([]byte(key), encryptedUUID, UUID, nonce) {
 			cookie := http.Cookie{
 				Name:  "session",
-				Value: encryptedUUID}
+				Value: encryptedUUIDStr}
 			fmt.Println("encryptedUUID", encryptedUUID, string(encryptedUUID))
 			http.SetCookie(w, &cookie)
 		}
@@ -99,7 +118,7 @@ func getURLForCut(s storage.Storage, encryptedUUID string, key string, UUID stri
 
 		//записываем в мапу пару shortLink:оригинальная ссылка
 		//err = s.PutURL(shortLink, urlForCuts)
-		err = s.PutURL(encryptedUUID, shortLink, urlForCuts)
+		err = s.PutURL(encryptedUUIDStr, shortLink, urlForCuts)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 			return
@@ -163,7 +182,9 @@ func shorten(s storage.Storage, encryptedUUID string) func(w http.ResponseWriter
 		shortURL := cfg.BaseURL + "/" + shortLink
 
 		//записываем в мапу encryptedUUID: [shortLink:urlForCuts]
-		err = s.PutURL(encryptedUUID, shortLink, urlForCuts)
+		encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
+
+		err = s.PutURL(encryptedUUIDStr, shortLink, urlForCuts)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 			return
@@ -189,43 +210,58 @@ func NewStorage(fileName string) (storage.Storage, error) {
 	}
 }
 
-func generateKey() (string, error, string, string) {
+func encryptesUUID() ([]byte, error, string, string, []byte) {
 	UUID := uuid.New()
 	fmt.Println(UUID.String(), UUID)
 
-	//подписываю куки
-	//1 перевожу в байты
-	uuidByte := []byte(UUID.String()) // данные, которые хотим зашифровать
+	src := []byte(UUID.String()) // данные, которые хотим зашифровать
+	fmt.Printf("original: %s\n", src)
 
-	//2 константа aes.BlockSize определяет размер блока и равна 16 байтам
 	// будем использовать AES256, создав ключ длиной 32 байта
-	key, err := generateRandom(aes.BlockSize) // ключ шифрования
-	//fmt.Println("crypto key", key)
+	key, err := generateRandom(2 * aes.BlockSize) // ключ шифрования
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
 	}
-	//3 получаем cipher.Block
+
 	aesblock, err := aes.NewCipher(key)
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
 	}
-	//4 зашифровываем
-	encryptedUUID := make([]byte, aes.BlockSize)
-	aesblock.Encrypt(encryptedUUID, uuidByte)
+
+	aesgcm, err := cipher.NewGCM(aesblock)
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+	}
+
+	// создаём вектор инициализации
+	nonce, err := generateRandom(aesgcm.NonceSize())
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+	}
+	fmt.Println("nonce", nonce)
+
+	encryptedUUID := aesgcm.Seal(nil, nonce, src, nil) // зашифровываем
+	fmt.Printf("encrypted: %x\n", encryptedUUID)
+
 	encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
-	return encryptedUUIDStr, nil, string(key), UUID.String()
+	fmt.Println(encryptedUUIDStr)
+
+	return encryptedUUID, nil, string(key), UUID.String(), nonce
 }
 
-func doSmth(s storage.Storage, encryptedUUIDKey string) func(w http.ResponseWriter, r *http.Request) {
+func doSmth(s storage.Storage, encryptedUUIDKey []byte, key, UUID string, nonce []byte) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		getUserURLs, err := s.GetUserURLs(encryptedUUIDKey)
+		encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUIDKey)
+
+		getUserURLs, err := s.GetUserURLs(encryptedUUIDStr)
 		fmt.Println("getUserURLs", getUserURLs, len(getUserURLs))
 
-		//cookieIsValid := checkKeyIsValid([]byte(key), []byte(encryptedUUIDKey), UUID)
-		//fmt.Println("cookieIsValid???", cookieIsValid)
-		if err != nil || len(getUserURLs) == 0 {
+		cookieIsValid := checkKeyIsValid([]byte(key), encryptedUUIDKey, UUID, nonce)
+		fmt.Println("cookieIsValid???", cookieIsValid)
+
+		if err != nil || len(getUserURLs) == 0 || cookieIsValid == false {
 			//w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			w.WriteHeader(http.StatusNoContent)
 		} else {
@@ -250,8 +286,8 @@ func doSmth(s storage.Storage, encryptedUUIDKey string) func(w http.ResponseWrit
 }
 
 func main() {
-	encryptedUUIDKey, _, key, UUID := generateKey()
-	keyToFunc := encryptedUUIDKey
+	encryptedUUIDKey, _, key, UUID, nonce := encryptesUUID()
+	keyToFunc := fmt.Sprintf("%x", encryptedUUIDKey)
 
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
@@ -290,11 +326,11 @@ func main() {
 		middleware.Compress(5),
 		middlewares.Decompress)
 
-	r.Post("/", getURLForCut(fileStorage, keyToFunc, key, UUID))
+	r.Post("/", getURLForCut(fileStorage, encryptedUUIDKey, key, UUID, nonce))
 	r.Get("/{id}", redirectTo(fileStorage, keyToFunc))
 	r.Get("/", notFoundFunc)
 	r.Post("/api/shorten", shorten(fileStorage, keyToFunc))
-	r.Get("/api/user/urls", doSmth(fileStorage, keyToFunc))
+	r.Get("/api/user/urls", doSmth(fileStorage, encryptedUUIDKey, key, UUID, nonce))
 
 	log.Fatal(http.ListenAndServe(ServerAddr, r))
 }
