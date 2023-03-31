@@ -219,10 +219,11 @@ type ResUsersLinks struct {
 
 func doSmth(s storage.Storage, encryptedUUIDKey string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 
 		getUserURLs, err := s.GetUserURLs(encryptedUUIDKey)
 		if err != nil {
-			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			//w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			w.WriteHeader(http.StatusNoContent)
 		} else {
 			type M map[string]interface{}
@@ -240,7 +241,7 @@ func doSmth(s storage.Storage, encryptedUUIDKey string) func(w http.ResponseWrit
 			fmt.Println(string(myJson))
 			w.Write(myJson)
 
-			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			//w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			w.WriteHeader(http.StatusOK)
 		}
 	}
