@@ -230,7 +230,7 @@ func doSmth(s storage.Storage, encryptedUUIDKey string) func(w http.ResponseWrit
 			var myMapSlice []M
 
 			for i, j := range getUserURLs {
-				res := M{"short_url": i, "original_url": j}
+				res := M{"short_url": cfg.BaseURL + "/" + i, "original_url": j}
 				myMapSlice = append(myMapSlice, res)
 
 			}
