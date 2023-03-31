@@ -222,7 +222,8 @@ func doSmth(s storage.Storage, encryptedUUIDKey string) func(w http.ResponseWrit
 		w.Header().Set("Content-Type", "application/json")
 
 		getUserURLs, err := s.GetUserURLs(encryptedUUIDKey)
-		if err != nil || len(getUserURLs) == 0 {
+		fmt.Println("getUserURLs", getUserURLs, len(getUserURLs))
+		if err != nil && len(getUserURLs) == 0 {
 			//w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			w.WriteHeader(http.StatusNoContent)
 		} else {
