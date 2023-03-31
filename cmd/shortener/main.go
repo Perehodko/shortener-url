@@ -218,13 +218,15 @@ func generateKey() (string, error, string, string) {
 
 func doSmth(s storage.Storage, encryptedUUIDKey string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
 		getUserURLs, err := s.GetUserURLs(encryptedUUIDKey)
 		fmt.Println("getUserURLs", getUserURLs, len(getUserURLs))
 
 		//cookieIsValid := checkKeyIsValid([]byte(key), []byte(encryptedUUIDKey), UUID)
 		//fmt.Println("cookieIsValid???", cookieIsValid)
 		if err != nil || len(getUserURLs) == 0 {
-			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			//w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			w.WriteHeader(http.StatusNoContent)
 		} else {
 			type M map[string]interface{}
@@ -242,7 +244,6 @@ func doSmth(s storage.Storage, encryptedUUIDKey string) func(w http.ResponseWrit
 			fmt.Println(string(myJson))
 			w.Write(myJson)
 
-			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 		}
 	}
