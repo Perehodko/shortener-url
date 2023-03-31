@@ -222,27 +222,27 @@ func doSmth(s storage.Storage, encryptedUUIDKey string) func(w http.ResponseWrit
 
 		getUserURLs, err := s.GetUserURLs(encryptedUUIDKey)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusNotFound)
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			w.WriteHeader(http.StatusNoContent)
+		} else {
+			type M map[string]interface{}
+
+			var myMapSlice []M
+
+			for i, j := range getUserURLs {
+				res := M{"short_url": i, "original_url": j}
+				myMapSlice = append(myMapSlice, res)
+
+			}
+
+			// or you could use `json.Marshal(myMapSlice)` if you want
+			myJson, _ := json.MarshalIndent(myMapSlice, "", "    ")
+			fmt.Println(string(myJson))
+			w.Write(myJson)
+
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			w.WriteHeader(http.StatusOK)
 		}
-		fmt.Println("getUserURLs", getUserURLs)
-
-		type M map[string]interface{}
-
-		var myMapSlice []M
-
-		for i, j := range getUserURLs {
-			res := M{"short_url": i, "original_url": j}
-			myMapSlice = append(myMapSlice, res)
-
-		}
-
-		// or you could use `json.Marshal(myMapSlice)` if you want
-		myJson, _ := json.MarshalIndent(myMapSlice, "", "    ")
-		fmt.Println(string(myJson))
-		w.Write(myJson)
-
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
 	}
 }
 
