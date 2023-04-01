@@ -256,8 +256,8 @@ func encryptesUUID() ([]byte, error, string, string, []byte) {
 func doSmth(s storage.Storage, encryptedUUIDKey []byte, key, UUID string, nonce []byte) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		cookie_ := (*http.Request).Cookie
-		fmt.Println("cookie_", cookie_)
+		cookieRes := r.Cookies()
+		fmt.Println("cookie_", cookieRes)
 
 		encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUIDKey)
 
