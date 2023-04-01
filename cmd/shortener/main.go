@@ -255,8 +255,8 @@ func encryptesUUID() ([]byte, error, string, string, []byte) {
 
 func doSmth(s storage.Storage, encryptedUUIDKey []byte, key, UUID string, nonce []byte) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		cookieRes := r.Cookies()
-		fmt.Println("cookie_", cookieRes, len(cookieRes))
+		//cookieRes := r.Cookies()
+		//fmt.Println("cookie_", cookieRes, len(cookieRes))
 
 		encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUIDKey)
 
@@ -266,7 +266,7 @@ func doSmth(s storage.Storage, encryptedUUIDKey []byte, key, UUID string, nonce 
 		cookieIsValid := checkKeyIsValid([]byte(key), encryptedUUIDKey, UUID, nonce)
 		fmt.Println("cookieIsValid???", cookieIsValid)
 
-		if err != nil || cookieIsValid == false || len(getUserURLs) == 0 {
+		if err != nil || !cookieIsValid || len(getUserURLs) == 0 {
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			w.WriteHeader(http.StatusNoContent)
 		} else {
@@ -283,9 +283,9 @@ func doSmth(s storage.Storage, encryptedUUIDKey []byte, key, UUID string, nonce 
 			// or you could use `json.Marshal(myMapSlice)` if you want
 			myJson, _ := json.MarshalIndent(myMapSlice, "", "    ")
 			fmt.Println(string(myJson))
-			w.Write(myJson)
 
 			w.Header().Set("Content-Type", "application/json")
+			w.Write(myJson)
 			w.WriteHeader(http.StatusOK)
 		}
 	}
