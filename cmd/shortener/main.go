@@ -265,8 +265,8 @@ func doSmth(s storage.Storage, encryptedUUIDKey []byte, key, UUID string, nonce 
 
 		if err != nil || !cookieIsValid || len(getUserURLs) == 0 {
 			//fmt.Println("err in if", err)
+			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusNoContent)
-			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		} else {
 			type M map[string]interface{}
 
