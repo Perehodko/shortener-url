@@ -184,9 +184,11 @@ func shorten(s storage.Storage, encryptedUUID string) func(w http.ResponseWriter
 		shortURL := cfg.BaseURL + "/" + shortLink
 
 		//записываем в мапу encryptedUUID: [shortLink:urlForCuts]
-		encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
+		//encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
+		//fmt.Println("shorten - encryptedUUID", encryptedUUID)
+		//fmt.Println("shorten - encryptedUUIDStr", encryptedUUIDStr)
 
-		err = s.PutURL(encryptedUUIDStr, shortLink, urlForCuts)
+		err = s.PutURL(encryptedUUID, shortLink, urlForCuts)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 			return
