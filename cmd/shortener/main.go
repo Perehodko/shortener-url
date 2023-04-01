@@ -270,7 +270,7 @@ func doSmth(s storage.Storage, encryptedUUIDKey []byte, key, UUID string, nonce 
 		if err != nil || cookieIsValid == false || len(getUserURLs) == 0 || len(cookieRes) == 0 {
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			w.WriteHeader(http.StatusNoContent)
-		} else {
+		} else if len(cookieRes) != 0 {
 			type M map[string]interface{}
 
 			var myMapSlice []M
