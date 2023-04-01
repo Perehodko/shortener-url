@@ -50,8 +50,8 @@ func checkCookieExist(r *http.Request) string {
 
 func checkKeyIsValid(key []byte, encryptedUUID []byte, UUID string, nonce []byte) bool {
 	//fmt.Println("checkKeyIsValid - encryptedUUID", encryptedUUID)
-	receive := fmt.Sprintf("%s", encryptedUUID)
-	fmt.Println("checkKeyIsValid - encryptedUUID", receive)
+	//receive := fmt.Sprintf("%s", encryptedUUID)
+	//fmt.Println("checkKeyIsValid - encryptedUUID", receive)
 
 	// получаем cipher.Block
 	aesblock, err := aes.NewCipher(key)
@@ -245,30 +245,28 @@ func encryptesUUID() ([]byte, error, string, string, []byte) {
 	fmt.Println("nonce", nonce)
 
 	encryptedUUID := aesgcm.Seal(nil, nonce, src, nil) // зашифровываем
-	fmt.Printf("encrypted: %x\n", encryptedUUID)
+	//fmt.Printf("encrypted: %x\n", encryptedUUID)
 
-	encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
-	fmt.Println(encryptedUUIDStr)
+	//encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
+	//fmt.Println(encryptedUUIDStr)
 
 	return encryptedUUID, nil, string(key), UUID.String(), nonce
 }
 
 func doSmth(s storage.Storage, encryptedUUIDKey []byte, key, UUID string, nonce []byte) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		//cookieRes := r.Cookies()
-		//fmt.Println("cookie_", cookieRes, len(cookieRes))
-
 		encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUIDKey)
 
 		getUserURLs, err := s.GetUserURLs(encryptedUUIDStr)
-		fmt.Println("getUserURLs", getUserURLs, len(getUserURLs))
+		//fmt.Println("getUserURLs", getUserURLs, len(getUserURLs), err)
 
 		cookieIsValid := checkKeyIsValid([]byte(key), encryptedUUIDKey, UUID, nonce)
-		fmt.Println("cookieIsValid???", cookieIsValid)
+		//fmt.Println("cookieIsValid???", cookieIsValid)
 
 		if err != nil || !cookieIsValid || len(getUserURLs) == 0 {
-			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			//fmt.Println("err in if", err)
 			w.WriteHeader(http.StatusNoContent)
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		} else {
 			type M map[string]interface{}
 
@@ -282,7 +280,7 @@ func doSmth(s storage.Storage, encryptedUUIDKey []byte, key, UUID string, nonce 
 
 			// or you could use `json.Marshal(myMapSlice)` if you want
 			myJson, _ := json.MarshalIndent(myMapSlice, "", "    ")
-			fmt.Println(string(myJson))
+			//fmt.Println(string(myJson))
 
 			w.Header().Set("Content-Type", "application/json")
 			w.Write(myJson)
@@ -295,7 +293,7 @@ func main() {
 	encryptedUUIDKey, _, key, UUID, nonce := encryptesUUID()
 	keyToFunc := fmt.Sprintf("%x", encryptedUUIDKey)
 
-	fmt.Println("keyToFunc", keyToFunc)
+	//fmt.Println("keyToFunc", keyToFunc)
 
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
