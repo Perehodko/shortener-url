@@ -257,7 +257,7 @@ func doSmth(s storage.Storage, encryptedUUIDKey []byte, key, UUID string, nonce 
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		cookieRes := r.Cookies()
-		fmt.Println("cookie_", cookieRes)
+		fmt.Println("cookie_", cookieRes, len(cookieRes))
 
 		encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUIDKey)
 
@@ -267,7 +267,7 @@ func doSmth(s storage.Storage, encryptedUUIDKey []byte, key, UUID string, nonce 
 		cookieIsValid := checkKeyIsValid([]byte(key), encryptedUUIDKey, UUID, nonce)
 		fmt.Println("cookieIsValid???", cookieIsValid)
 
-		if err != nil || cookieIsValid == false || len(getUserURLs) == 0 {
+		if err != nil || cookieIsValid == false || len(getUserURLs) == 0 || len(cookieRes) == 0 {
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			w.WriteHeader(http.StatusNoContent)
 		} else {
