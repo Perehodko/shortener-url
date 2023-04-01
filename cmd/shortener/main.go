@@ -98,7 +98,7 @@ func getURLForCut(s storage.Storage, encryptedUUID []byte, key string, UUID stri
 			cookie := http.Cookie{
 				Name:  "session",
 				Value: encryptedUUIDStr}
-			fmt.Println("encryptedUUID", encryptedUUID, string(encryptedUUID))
+			//fmt.Println("encryptedUUID", encryptedUUID, string(encryptedUUID), encryptedUUIDStr)
 			http.SetCookie(w, &cookie)
 		}
 
@@ -136,10 +136,12 @@ func notFoundFunc(w http.ResponseWriter, r *http.Request) {
 func redirectTo(s storage.Storage, encryptedUUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		shortURL := chi.URLParam(r, "id")
+		fmt.Println("shortURL", shortURL)
 
 		//initialURL, err := s.GetURL(encryptedUUID)
 		initialURL, err := s.GetURL(encryptedUUID, shortURL)
-
+		fmt.Println("encryptedUUID, initialURL, shortURL, c", encryptedUUID, initialURL, shortURL)
+		fmt.Println("err", err)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -288,6 +290,8 @@ func doSmth(s storage.Storage, encryptedUUIDKey []byte, key, UUID string, nonce 
 func main() {
 	encryptedUUIDKey, _, key, UUID, nonce := encryptesUUID()
 	keyToFunc := fmt.Sprintf("%x", encryptedUUIDKey)
+
+	fmt.Println("keyToFunc", keyToFunc)
 
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
