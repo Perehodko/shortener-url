@@ -284,7 +284,7 @@ func doSmth(s storage.Storage, encryptedUUIDKey []byte, key, UUID string, nonce 
 			fmt.Println(string(myJson))
 			w.Write(myJson)
 
-			w.WriteHeader(http.StatusOK)
+			w.WriteHeader(http.StatusNoContent)
 		}
 	}
 }
