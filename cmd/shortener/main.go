@@ -9,13 +9,13 @@ import (
 	"github.com/Perehodko/shortener-url/internal/middlewares"
 	"github.com/Perehodko/shortener-url/internal/storage"
 	"github.com/Perehodko/shortener-url/internal/utils"
+	"github.com/Perehodko/shortener-url/internal/work-with-cookie"
 	"github.com/caarlos0/env/v6"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
 	"io"
 	"log"
-	"math/rand"
 	"net/http"
 )
 
@@ -27,66 +27,6 @@ type Config struct {
 
 var cfg Config
 
-func generateRandom(size int) ([]byte, error) {
-	b := make([]byte, size)
-	_, err := rand.Read(b)
-	if err != nil {
-		return nil, err
-	}
-
-	return b, nil
-}
-
-func checkCookieExist(r *http.Request) string {
-	cookie, err := r.Cookie("session")
-	var sessionCookie string
-	if err == nil {
-		sessionCookie = cookie.Value
-	} else if err != http.ErrNoCookie {
-		log.Println(err)
-	}
-	return sessionCookie
-}
-
-func checkKeyIsValid(key []byte, encryptedUUID []byte, UUID string, nonce []byte) bool {
-	//fmt.Println("checkKeyIsValid - encryptedUUID", encryptedUUID)
-	//receive := fmt.Sprintf("%s", encryptedUUID)
-	//fmt.Println("checkKeyIsValid - encryptedUUID", receive)
-
-	// получаем cipher.Block
-	aesblock, err := aes.NewCipher(key)
-	if err != nil {
-		fmt.Printf("error: %v\n", err)
-	}
-	aesgcm, err := cipher.NewGCM(aesblock)
-	if err != nil {
-		panic(err)
-	}
-
-	//dst := aesgcm.Seal(nil, nonce, []byte(UUID), nil) // зашифровываем
-	//fmt.Printf("encrypted: %x\n", dst)
-	//
-	//fmt.Println("receive, dst", encryptedUUID, dst)
-	//dst_2 := fmt.Sprintf("%s", dst)
-	//
-	//fmt.Println("receive, dst", receive, dst_2)
-
-	src2, err := aesgcm.Open(nil, nonce, encryptedUUID, nil) // расшифровываем
-	if err != nil {
-		fmt.Printf("error checkKeyIsValid: %v\n", err)
-	}
-	fmt.Println("расшифррованный UUID ", src2)
-	encryptedUUIDStr := fmt.Sprintf("%s", src2)
-	fmt.Println("расшифррованный UUID2 ", encryptedUUIDStr)
-	fmt.Println("UUID == string(src2)???", UUID == string(src2))
-
-	if UUID == string(src2) {
-		return true
-	} else {
-		return false
-	}
-}
-
 func getURLForCut(s storage.Storage, encryptedUUID []byte, key string, UUID string, nonce []byte) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -94,7 +34,7 @@ func getURLForCut(s storage.Storage, encryptedUUID []byte, key string, UUID stri
 
 		encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
 
-		if len(checkCookieExist(r)) == 0 || !checkKeyIsValid([]byte(key), encryptedUUID, UUID, nonce) {
+		if len(work_with_cookie.CheckCookieExist(r)) == 0 || !work_with_cookie.CheckKeyIsValid([]byte(key), encryptedUUID, UUID, nonce) {
 			cookie := http.Cookie{
 				Name:  "session",
 				Value: encryptedUUIDStr}
@@ -222,7 +162,7 @@ func encryptesUUID() ([]byte, error, string, string, []byte) {
 	fmt.Printf("original: %s\n", src)
 
 	// будем использовать AES256, создав ключ длиной 32 байта
-	key, err := generateRandom(2 * aes.BlockSize) // ключ шифрования
+	key, err := work_with_cookie.GenerateRandom(2 * aes.BlockSize) // ключ шифрования
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
 	}
@@ -238,7 +178,7 @@ func encryptesUUID() ([]byte, error, string, string, []byte) {
 	}
 
 	// создаём вектор инициализации
-	nonce, err := generateRandom(aesgcm.NonceSize())
+	nonce, err := work_with_cookie.GenerateRandom(aesgcm.NonceSize())
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
 	}
@@ -253,14 +193,15 @@ func encryptesUUID() ([]byte, error, string, string, []byte) {
 	return encryptedUUID, nil, string(key), UUID.String(), nonce
 }
 
-func doSmth(s storage.Storage, encryptedUUIDKey []byte, key, UUID string, nonce []byte) func(w http.ResponseWriter, r *http.Request) {
+func getUserURLs(s storage.Storage, encryptedUUIDKey []byte, key, UUID string, nonce []byte) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+
 		encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUIDKey)
 
 		getUserURLs, err := s.GetUserURLs(encryptedUUIDStr)
 		//fmt.Println("getUserURLs", getUserURLs, len(getUserURLs), err)
 
-		cookieIsValid := checkKeyIsValid([]byte(key), encryptedUUIDKey, UUID, nonce)
+		cookieIsValid := work_with_cookie.CheckKeyIsValid([]byte(key), encryptedUUIDKey, UUID, nonce)
 		//fmt.Println("cookieIsValid???", cookieIsValid)
 
 		if err != nil || !cookieIsValid || len(getUserURLs) == 0 {
@@ -336,7 +277,7 @@ func main() {
 	r.Get("/{id}", redirectTo(fileStorage, keyToFunc))
 	r.Get("/", notFoundFunc)
 	r.Post("/api/shorten", shorten(fileStorage, keyToFunc))
-	r.Get("/api/user/urls", doSmth(fileStorage, encryptedUUIDKey, key, UUID, nonce))
+	r.Get("/api/user/urls", getUserURLs(fileStorage, encryptedUUIDKey, key, UUID, nonce))
 
 	log.Fatal(http.ListenAndServe(ServerAddr, r))
 }
