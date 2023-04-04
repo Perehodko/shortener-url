@@ -128,7 +128,7 @@ func shorten(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http
 			uid = UUID
 		}
 
-		fmt.Println("uid", uid)
+		fmt.Println("shorten - uid", uid)
 
 		decoder := json.NewDecoder(r.Body)
 		var u URLStruct
@@ -175,17 +175,18 @@ func NewStorage(fileName string) (storage.Storage, error) {
 
 func getUserURLs(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		uid, err := work_with_cookie.ExtractUID(r.Cookies())
-		if err != nil {
-			http.Error(w, "no links in storage at current UUID", http.StatusNoContent)
-			return
-		}
-		//uid = UUID
 
-		fmt.Println("getUserURLs - uid-2", uid)
+		uid, err := work_with_cookie.ExtractUID(r.Cookies())
+
+		//if err != nil {
+		//	fmt.Println("getUserURLs - uid-2", uid)
+		//	http.Error(w, "no links in storage at current UUID", http.StatusNoContent)
+		//	return
+		//}
 
 		//encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
-
+		uid = UUID
+		fmt.Println("getUserURLs - uid = UUID", uid)
 		getUserURLs, err := s.GetUserURLs(uid)
 		fmt.Println("getUserURLs", getUserURLs, len(getUserURLs), err)
 		if len(getUserURLs) == 0 {

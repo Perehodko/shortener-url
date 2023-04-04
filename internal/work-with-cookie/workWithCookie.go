@@ -179,6 +179,7 @@ func ExtractUID(cookies []*http.Cookie) (string, error) {
 			if CheckTokenIsValid(UUID, hash) {
 				return UUID, nil
 			}
+			return "", ErrInvalidCookieDigest
 		}
 	}
 	return "", errors.New("no cookie")
@@ -187,7 +188,7 @@ func ExtractUID(cookies []*http.Cookie) (string, error) {
 // SetUUIDCookie сохраняет в куку uuid пользователя вместе с его hmac
 func SetUUIDCookie(w http.ResponseWriter, uid string) {
 	UUIDEncrypted := fmt.Sprintf("%s:%s", uid, EncryptedUUID(uid))
-	fmt.Println("UUIDEncrypted", EncryptedUUID(uid))
+	fmt.Println("workWithCookie - UUIDEncrypted, uid", EncryptedUUID(uid), uid)
 
 	http.SetCookie(w, &http.Cookie{
 		Name:  "session",
