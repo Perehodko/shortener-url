@@ -17,7 +17,6 @@ func GenerateRandom(size int) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return b, nil
 }
 
@@ -149,6 +148,7 @@ var secret = "secretForEncrypt" // Прочитать из env/конфига
 
 // EncryptedUUID вычисление HMAC-SHA256 для переданной строки
 func EncryptedUUID(data string) string {
+	secret, _ := GenerateRandom(32)
 	h := hmac.New(sha256.New, []byte(secret))
 	h.Write([]byte(data))
 	return hex.EncodeToString(h.Sum(nil))

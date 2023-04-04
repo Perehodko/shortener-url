@@ -176,43 +176,43 @@ func NewStorage(fileName string) (storage.Storage, error) {
 func getUserURLs(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		uid, err := work_with_cookie.ExtractUID(r.Cookies())
-		if err != nil {
-			http.Error(w, "no links in storage at current UUID", http.StatusNoContent)
-			return
-		}
+		//if err != nil {
+		//	http.Error(w, "no links in storage at current UUID", http.StatusNoContent)
+		//	return
+		//}
+		fmt.Println("getUserURLs - uid", uid)
 		uid = UUID
 
 		//encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
 
 		getUserURLs, err := s.GetUserURLs(uid)
-		//fmt.Println("getUserURLs", getUserURLs, len(getUserURLs), err)
+		fmt.Println("getUserURLs", getUserURLs, len(getUserURLs), err)
 
 		//cookieIsValid := work_with_cookie.CheckKeyIsValid([]byte(key), encryptedUUIDKey, UUID, nonce)
 		//fmt.Println("cookieIsValid???", cookieIsValid)
 
-		if err != nil || len(getUserURLs) == 0 {
-			//fmt.Println("err in if", err)
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusNoContent)
-		} else {
-			type M map[string]interface{}
+		//if err != nil {
+		//	//fmt.Println("err in if", err)
+		//	w.Header().Set("Content-Type", "application/json")
+		//	w.WriteHeader(http.StatusNoContent)
+		//} else {
+		type M map[string]interface{}
 
-			var myMapSlice []M
+		var myMapSlice []M
 
-			for i, j := range getUserURLs {
-				res := M{"short_url": cfg.BaseURL + "/" + i, "original_url": j}
-				myMapSlice = append(myMapSlice, res)
-
-			}
-
-			// or you could use `json.Marshal(myMapSlice)` if you want
-			myJson, _ := json.MarshalIndent(myMapSlice, "", "    ")
-			//fmt.Println(string(myJson))
-
-			w.Header().Set("Content-Type", "application/json")
-			w.Write(myJson)
-			w.WriteHeader(http.StatusOK)
+		for i, j := range getUserURLs {
+			res := M{"short_url": cfg.BaseURL + "/" + i, "original_url": j}
+			myMapSlice = append(myMapSlice, res)
 		}
+
+		// or you could use `json.Marshal(myMapSlice)` if you want
+		myJson, _ := json.MarshalIndent(myMapSlice, "", "    ")
+		//fmt.Println(string(myJson))
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(myJson)
+		w.WriteHeader(http.StatusOK)
+
 	}
 }
 
@@ -222,7 +222,10 @@ func main() {
 
 	//fmt.Println("keyToFunc", keyToFunc)
 
-	UUID := uuid.New().String()
+	uuid := uuid.New()
+	UUID := uuid.String()
+
+	//var key, _ = work_with_cookie.GenerateRandom(32)
 
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
