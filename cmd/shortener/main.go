@@ -176,10 +176,10 @@ func NewStorage(fileName string) (storage.Storage, error) {
 func getUserURLs(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		uid, err := work_with_cookie.ExtractUID(r.Cookies())
-		//if err != nil {
-		//	http.Error(w, "no links in storage at current UUID", http.StatusNoContent)
-		//	return
-		//}
+		if err != nil {
+			http.Error(w, "no links in storage at current UUID", http.StatusNoContent)
+			return
+		}
 		fmt.Println("getUserURLs - uid", uid)
 		uid = UUID
 
