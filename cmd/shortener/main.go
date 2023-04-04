@@ -180,13 +180,18 @@ func getUserURLs(s storage.Storage, UUID string) func(w http.ResponseWriter, r *
 			http.Error(w, "no links in storage at current UUID", http.StatusNoContent)
 			return
 		}
-		fmt.Println("getUserURLs - uid", uid)
-		uid = UUID
+		//uid = UUID
+
+		fmt.Println("getUserURLs - uid-2", uid)
 
 		//encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
 
 		getUserURLs, err := s.GetUserURLs(uid)
 		fmt.Println("getUserURLs", getUserURLs, len(getUserURLs), err)
+		if len(getUserURLs) == 0 {
+			http.Error(w, "no links", http.StatusNoContent)
+			return
+		}
 
 		//cookieIsValid := work_with_cookie.CheckKeyIsValid([]byte(key), encryptedUUIDKey, UUID, nonce)
 		//fmt.Println("cookieIsValid???", cookieIsValid)
