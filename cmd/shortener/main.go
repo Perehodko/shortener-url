@@ -183,7 +183,8 @@ func getUserURLs(s storage.Storage, UUID string) func(w http.ResponseWriter, r *
 		fmt.Println("getUserURLs - uid = UUID", uid)
 		getUserURLs, err := s.GetUserURLs(uid)
 		fmt.Println("getUserURLs", getUserURLs, len(getUserURLs), err)
-		if len(getUserURLs) == 0 || err != nil {
+
+		if err != nil || len(getUserURLs) == 0 {
 			http.Error(w, "no links", http.StatusNoContent)
 			return
 		}
