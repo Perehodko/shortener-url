@@ -1,8 +1,6 @@
 package main
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -27,20 +25,20 @@ type Config struct {
 
 var cfg Config
 
-func getURLForCut(s storage.Storage, encryptedUUID []byte, key string, UUID string, nonce []byte) func(w http.ResponseWriter, r *http.Request) {
+func getURLForCut(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusCreated)
 
-		encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
-
-		if len(work_with_cookie.CheckCookieExist(r)) == 0 || !work_with_cookie.CheckKeyIsValid([]byte(key), encryptedUUID, UUID, nonce) {
-			cookie := http.Cookie{
-				Name:  "session",
-				Value: encryptedUUIDStr}
-			//fmt.Println("encryptedUUID", encryptedUUID, string(encryptedUUID), encryptedUUIDStr)
-			http.SetCookie(w, &cookie)
+		uid, err := work_with_cookie.ExtractUID(r.Cookies())
+		if err != nil {
+			uid = UUID
 		}
+		//encryptedUUID, err := work_with_cookie.ExtractUID(r.Cookies())
+		//if err != nil {
+		//	http.Error(w, err.Error(), http.StatusInternalServerError)
+		//}
+		//encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
 
 		// читаем Body
 		defer r.Body.Close()
@@ -58,11 +56,13 @@ func getURLForCut(s storage.Storage, encryptedUUID []byte, key string, UUID stri
 
 		//записываем в мапу пару shortLink:оригинальная ссылка
 		//err = s.PutURL(shortLink, urlForCuts)
-		err = s.PutURL(encryptedUUIDStr, shortLink, urlForCuts)
+		err = s.PutURL(uid, shortLink, urlForCuts)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 			return
 		}
+
+		work_with_cookie.SetUUIDCookie(w, uid)
 		w.Write([]byte(shortURL))
 	}
 }
@@ -73,20 +73,32 @@ func notFoundFunc(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Not found"))
 }
 
-func redirectTo(s storage.Storage, encryptedUUID string) func(w http.ResponseWriter, r *http.Request) {
+func redirectTo(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		shortURL := chi.URLParam(r, "id")
 		fmt.Println("shortURL", shortURL)
 
 		//initialURL, err := s.GetURL(encryptedUUID)
-		initialURL, err := s.GetURL(encryptedUUID, shortURL)
-		fmt.Println("encryptedUUID, initialURL, shortURL, c", encryptedUUID, initialURL, shortURL)
+		//encryptedUUID, err := work_with_cookie.ExtractUID(r.Cookies())
+		//if err != nil {
+		//	http.Error(w, err.Error(), http.StatusInternalServerError)
+		//}
+		//encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
+
+		uid, err := work_with_cookie.ExtractUID(r.Cookies())
+		if err != nil {
+			uid = UUID
+		}
+
+		initialURL, err := s.GetURL(uid, shortURL)
+		//fmt.Println("encryptedUUID, initialURL, shortURL, c", encryptedUUID, initialURL, shortURL)
 		fmt.Println("err", err)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
+		work_with_cookie.SetUUIDCookie(w, uid)
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("Location", initialURL)
 		w.WriteHeader(http.StatusTemporaryRedirect)
@@ -101,34 +113,39 @@ type Res struct {
 	Result string `json:"result"`
 }
 
-func shorten(s storage.Storage, encryptedUUID string) func(w http.ResponseWriter, r *http.Request) {
+func shorten(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
+		//encryptedUUID, err := work_with_cookie.ExtractUID(r.Cookies())
+		//if err != nil {
+		//	http.Error(w, err.Error(), http.StatusInternalServerError)
+		//}
+
+		uid, err := work_with_cookie.ExtractUID(r.Cookies())
+		if err != nil {
+			uid = UUID
+		}
+
+		fmt.Println("uid", uid)
+
 		decoder := json.NewDecoder(r.Body)
 		var u URLStruct
 
-		fmt.Println("r.Body!!!", r.Body)
-		err := decoder.Decode(&u)
+		err = decoder.Decode(&u)
 		if err != nil {
-			//panic(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		//получаю из хранилища результат
 		urlForCuts := u.URL
-		fmt.Println("urlForCuts-shoren", urlForCuts)
+		//fmt.Println("urlForCuts-shoren", urlForCuts)
 
 		shortLink := utils.GenerateRandomString()
 		shortURL := cfg.BaseURL + "/" + shortLink
 
-		//записываем в мапу encryptedUUID: [shortLink:urlForCuts]
-		//encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
-		//fmt.Println("shorten - encryptedUUID", encryptedUUID)
-		//fmt.Println("shorten - encryptedUUIDStr", encryptedUUIDStr)
-
-		err = s.PutURL(encryptedUUID, shortLink, urlForCuts)
+		err = s.PutURL(uid, shortLink, urlForCuts)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 			return
@@ -140,6 +157,8 @@ func shorten(s storage.Storage, encryptedUUID string) func(w http.ResponseWriter
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
+
+		work_with_cookie.SetUUIDCookie(w, uid)
 		w.Write(txBz)
 	}
 }
@@ -154,57 +173,24 @@ func NewStorage(fileName string) (storage.Storage, error) {
 	}
 }
 
-func encryptesUUID() ([]byte, error, string, string, []byte) {
-	UUID := uuid.New()
-	fmt.Println(UUID.String(), UUID)
-
-	src := []byte(UUID.String()) // данные, которые хотим зашифровать
-	fmt.Printf("original: %s\n", src)
-
-	// будем использовать AES256, создав ключ длиной 32 байта
-	key, err := work_with_cookie.GenerateRandom(2 * aes.BlockSize) // ключ шифрования
-	if err != nil {
-		fmt.Printf("error: %v\n", err)
-	}
-
-	aesblock, err := aes.NewCipher(key)
-	if err != nil {
-		fmt.Printf("error: %v\n", err)
-	}
-
-	aesgcm, err := cipher.NewGCM(aesblock)
-	if err != nil {
-		fmt.Printf("error: %v\n", err)
-	}
-
-	// создаём вектор инициализации
-	nonce, err := work_with_cookie.GenerateRandom(aesgcm.NonceSize())
-	if err != nil {
-		fmt.Printf("error: %v\n", err)
-	}
-	fmt.Println("nonce", nonce)
-
-	encryptedUUID := aesgcm.Seal(nil, nonce, src, nil) // зашифровываем
-	//fmt.Printf("encrypted: %x\n", encryptedUUID)
-
-	//encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
-	//fmt.Println(encryptedUUIDStr)
-
-	return encryptedUUID, nil, string(key), UUID.String(), nonce
-}
-
-func getUserURLs(s storage.Storage, encryptedUUIDKey []byte, key, UUID string, nonce []byte) func(w http.ResponseWriter, r *http.Request) {
+func getUserURLs(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		uid, err := work_with_cookie.ExtractUID(r.Cookies())
+		if err != nil {
+			http.Error(w, "no links in storage at current UUID", http.StatusNoContent)
+			return
+		}
+		uid = UUID
 
-		encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUIDKey)
+		//encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
 
-		getUserURLs, err := s.GetUserURLs(encryptedUUIDStr)
+		getUserURLs, err := s.GetUserURLs(uid)
 		//fmt.Println("getUserURLs", getUserURLs, len(getUserURLs), err)
 
-		cookieIsValid := work_with_cookie.CheckKeyIsValid([]byte(key), encryptedUUIDKey, UUID, nonce)
+		//cookieIsValid := work_with_cookie.CheckKeyIsValid([]byte(key), encryptedUUIDKey, UUID, nonce)
 		//fmt.Println("cookieIsValid???", cookieIsValid)
 
-		if err != nil || !cookieIsValid || len(getUserURLs) == 0 {
+		if err != nil || len(getUserURLs) == 0 {
 			//fmt.Println("err in if", err)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusNoContent)
@@ -231,10 +217,12 @@ func getUserURLs(s storage.Storage, encryptedUUIDKey []byte, key, UUID string, n
 }
 
 func main() {
-	encryptedUUIDKey, _, key, UUID, nonce := encryptesUUID()
-	keyToFunc := fmt.Sprintf("%x", encryptedUUIDKey)
+	//encryptedUUIDKey, _, key, UUID, nonce := work_with_cookie.EncryptedUUID()
+	//keyToFunc := fmt.Sprintf("%x", encryptedUUIDKey)
 
 	//fmt.Println("keyToFunc", keyToFunc)
+
+	UUID := uuid.New().String()
 
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
@@ -273,11 +261,11 @@ func main() {
 		middleware.Compress(5),
 		middlewares.Decompress)
 
-	r.Post("/", getURLForCut(fileStorage, encryptedUUIDKey, key, UUID, nonce))
-	r.Get("/{id}", redirectTo(fileStorage, keyToFunc))
+	r.Post("/", getURLForCut(fileStorage, UUID))
+	r.Get("/{id}", redirectTo(fileStorage, UUID))
 	r.Get("/", notFoundFunc)
-	r.Post("/api/shorten", shorten(fileStorage, keyToFunc))
-	r.Get("/api/user/urls", getUserURLs(fileStorage, encryptedUUIDKey, key, UUID, nonce))
+	r.Post("/api/shorten", shorten(fileStorage, UUID))
+	r.Get("/api/user/urls", getUserURLs(fileStorage, UUID))
 
 	log.Fatal(http.ListenAndServe(ServerAddr, r))
 }
