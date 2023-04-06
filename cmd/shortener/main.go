@@ -108,8 +108,6 @@ type Res struct {
 
 func shorten(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
 
 		uid, err := work_with_cookie.ExtractUID(r.Cookies())
 		if err != nil {
@@ -147,6 +145,8 @@ func shorten(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
 		}
 
 		work_with_cookie.SetUUIDCookie(w, uid)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
 		w.Write(txBz)
 	}
 }
