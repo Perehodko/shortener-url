@@ -32,6 +32,7 @@ func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request
 		if err != nil {
 			uid = work_with_cookie.UserID()
 		}
+		fmt.Println("getURLForCut - uid", uid)
 
 		// читаем Body
 		defer r.Body.Close()
@@ -76,6 +77,7 @@ func redirectTo(s storage.Storage) func(w http.ResponseWriter, r *http.Request) 
 		if err != nil {
 			uid = work_with_cookie.UserID()
 		}
+		fmt.Println("redirectTo - uid", uid)
 
 		initialURL, err := s.GetURL(uid, shortURL)
 		//fmt.Println("encryptedUUID, initialURL, shortURL, c", encryptedUUID, initialURL, shortURL)
@@ -86,9 +88,9 @@ func redirectTo(s storage.Storage) func(w http.ResponseWriter, r *http.Request) 
 		}
 
 		work_with_cookie.SetUUIDCookie(w, uid)
+		w.WriteHeader(http.StatusTemporaryRedirect)
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("Location", initialURL)
-		w.WriteHeader(http.StatusTemporaryRedirect)
 	}
 }
 
