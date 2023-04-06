@@ -1,4 +1,4 @@
-package workWithCookie
+package workwithcookie
 
 import (
 	"crypto/hmac"
@@ -188,7 +188,7 @@ func ExtractUID(cookies []*http.Cookie) (string, error) {
 func SetUUIDCookie(w http.ResponseWriter, uid string) {
 	UUIDEncrypted := fmt.Sprintf("%s:%s", uid, EncryptedUUID(uid))
 	fmt.Println("UUIDEncrypted", UUIDEncrypted)
-	fmt.Println("workWithCookie - UUIDEncrypted, uid", EncryptedUUID(uid), uid)
+	fmt.Println("workwithcookie - UUIDEncrypted, uid", EncryptedUUID(uid), uid)
 
 	http.SetCookie(w, &http.Cookie{
 		Name:   "session",
