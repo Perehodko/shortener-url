@@ -1,4 +1,4 @@
-package work_with_cookie
+package workWithCookie
 
 import (
 	"crypto/hmac"

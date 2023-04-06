@@ -7,7 +7,7 @@ import (
 	"github.com/Perehodko/shortener-url/internal/middlewares"
 	"github.com/Perehodko/shortener-url/internal/storage"
 	"github.com/Perehodko/shortener-url/internal/utils"
-	"github.com/Perehodko/shortener-url/internal/work-with-cookie"
+	"github.com/Perehodko/shortener-url/internal/workWithCookie"
 	"github.com/caarlos0/env/v6"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -29,9 +29,9 @@ func getURLForCut(s storage.Storage, uuidSTR string) func(w http.ResponseWriter,
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 
-		uid, err := work_with_cookie.ExtractUID(r.Cookies())
+		uid, err := workWithCookie.ExtractUID(r.Cookies())
 		if err != nil {
-			uid = work_with_cookie.UserID()
+			uid = workWithCookie.UserID()
 		}
 		fmt.Println("getURLForCut - uid", uid)
 
@@ -58,7 +58,7 @@ func getURLForCut(s storage.Storage, uuidSTR string) func(w http.ResponseWriter,
 			return
 		}
 
-		work_with_cookie.SetUUIDCookie(w, uid)
+		workWithCookie.SetUUIDCookie(w, uid)
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte(shortURL))
 	}
@@ -78,9 +78,9 @@ func redirectTo(s storage.Storage, uuidSTR string) func(w http.ResponseWriter, r
 		a, b := r.Cookie("session")
 		fmt.Println("redirectTo -- session cookie - a, b", a, b)
 
-		uid, err := work_with_cookie.ExtractUID(r.Cookies())
+		uid, err := workWithCookie.ExtractUID(r.Cookies())
 		if err != nil {
-			uid = work_with_cookie.UserID()
+			uid = workWithCookie.UserID()
 		}
 		fmt.Println("redirectTo - uid", uid)
 
@@ -92,7 +92,7 @@ func redirectTo(s storage.Storage, uuidSTR string) func(w http.ResponseWriter, r
 			return
 		}
 
-		work_with_cookie.SetUUIDCookie(w, uid)
+		workWithCookie.SetUUIDCookie(w, uid)
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("Location", initialURL)
 		w.WriteHeader(http.StatusTemporaryRedirect)
@@ -110,9 +110,9 @@ type Res struct {
 func shorten(s storage.Storage, uuidSTR string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		uid, err := work_with_cookie.ExtractUID(r.Cookies())
+		uid, err := workWithCookie.ExtractUID(r.Cookies())
 		if err != nil {
-			uid = work_with_cookie.UserID()
+			uid = workWithCookie.UserID()
 		}
 
 		fmt.Println("shorten - uid", uid)
@@ -145,7 +145,7 @@ func shorten(s storage.Storage, uuidSTR string) func(w http.ResponseWriter, r *h
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 
-		work_with_cookie.SetUUIDCookie(w, uid)
+		workWithCookie.SetUUIDCookie(w, uid)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		w.Write(txBz)
@@ -165,7 +165,7 @@ func NewStorage(fileName string) (storage.Storage, error) {
 func getUserURLs(s storage.Storage, uuidSTR string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		uid, err := work_with_cookie.ExtractUID(r.Cookies())
+		uid, err := workWithCookie.ExtractUID(r.Cookies())
 		if err != nil {
 			http.Error(w, "no links", http.StatusNoContent)
 			return
@@ -193,15 +193,15 @@ func getUserURLs(s storage.Storage, uuidSTR string) func(w http.ResponseWriter, 
 		}
 
 		// or you could use `json.Marshal(myMapSlice)` if you want
-		myJson, err := json.MarshalIndent(myMapSlice, "", "    ")
-		//fmt.Println(string(myJson))
+		myJSON, err := json.MarshalIndent(myMapSlice, "", "    ")
+		//fmt.Println(string(myJSON))
 		if err != nil {
 			http.Error(w, "no links", http.StatusNoContent)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(myJson)
+		w.Write(myJSON)
 		w.WriteHeader(http.StatusOK)
 
 	}
