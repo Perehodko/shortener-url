@@ -107,7 +107,7 @@ type Res struct {
 	Result string `json:"result"`
 }
 
-func shorten(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
+func shorten(s storage.Storage, uuidSTR string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		uid, err := work_with_cookie.ExtractUID(r.Cookies())
@@ -132,7 +132,7 @@ func shorten(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
 		shortLink := utils.GenerateRandomString()
 		shortURL := cfg.BaseURL + "/" + shortLink
 
-		err = s.PutURL(uid, shortLink, urlForCuts)
+		err = s.PutURL(uuidSTR, shortLink, urlForCuts)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 			return
@@ -162,7 +162,7 @@ func NewStorage(fileName string) (storage.Storage, error) {
 	}
 }
 
-func getUserURLs(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
+func getUserURLs(s storage.Storage, uuidSTR string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		uid, err := work_with_cookie.ExtractUID(r.Cookies())
@@ -173,7 +173,7 @@ func getUserURLs(s storage.Storage) func(w http.ResponseWriter, r *http.Request)
 
 		//encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
 		fmt.Println("getUserURLs - uid = UUID", uid)
-		getUserURLs, err := s.GetUserURLs(uid)
+		getUserURLs, err := s.GetUserURLs(uuidSTR)
 		fmt.Println("getUserURLs", getUserURLs, len(getUserURLs), err)
 		if err != nil {
 			http.Error(w, "internal error", http.StatusNoContent)
@@ -261,8 +261,8 @@ func main() {
 	r.Post("/", getURLForCut(fileStorage, uuidSTR))
 	r.Get("/{id}", redirectTo(fileStorage, uuidSTR))
 	r.Get("/", notFoundFunc)
-	r.Post("/api/shorten", shorten(fileStorage))
-	r.Get("/api/user/urls", getUserURLs(fileStorage))
+	r.Post("/api/shorten", shorten(fileStorage, uuidSTR))
+	r.Get("/api/user/urls", getUserURLs(fileStorage, uuidSTR))
 
 	log.Fatal(http.ListenAndServe(ServerAddr, r))
 }
