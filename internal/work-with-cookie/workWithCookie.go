@@ -137,8 +137,6 @@ func GenerateRandom(size int) ([]byte, error) {
 //	})
 //}
 
-const uidCookieName = "SHORTENER_UID"
-
 var (
 	ErrInvalidCookieValue  = errors.New("invalid cookie value")
 	ErrInvalidCookieDigest = errors.New("invalid cookie digest")
@@ -149,8 +147,7 @@ var secret = "secretForEncrypt" // Прочитать из env/конфига
 
 // EncryptedUUID вычисление HMAC-SHA256 для переданной строки
 func EncryptedUUID(data string) string {
-	secret, _ := GenerateRandom(32)
-	h := hmac.New(sha256.New, secret)
+	h := hmac.New(sha256.New, []byte(secret))
 	h.Write([]byte(data))
 	EncryptedUUID := hex.EncodeToString(h.Sum(nil))
 	return EncryptedUUID
@@ -194,9 +191,11 @@ func SetUUIDCookie(w http.ResponseWriter, uid string) {
 	fmt.Println("workWithCookie - UUIDEncrypted, uid", EncryptedUUID(uid), uid)
 
 	http.SetCookie(w, &http.Cookie{
-		Name:   "session",
-		Value:  UUIDEncrypted,
-		MaxAge: 3000000,
+		Name:     "session",
+		Value:    UUIDEncrypted,
+		MaxAge:   10000,
+		SameSite: http.SameSiteNoneMode,
+		Secure:   false,
 	})
 }
 

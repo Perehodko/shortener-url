@@ -33,11 +33,6 @@ func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request
 		if err != nil {
 			uid = work_with_cookie.UserID()
 		}
-		//encryptedUUID, err := work_with_cookie.ExtractUID(r.Cookies())
-		//if err != nil {
-		//	http.Error(w, err.Error(), http.StatusInternalServerError)
-		//}
-		//encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
 
 		// читаем Body
 		defer r.Body.Close()
@@ -77,13 +72,6 @@ func redirectTo(s storage.Storage) func(w http.ResponseWriter, r *http.Request) 
 		shortURL := chi.URLParam(r, "id")
 		fmt.Println("shortURL", shortURL)
 
-		//initialURL, err := s.GetURL(encryptedUUID)
-		//encryptedUUID, err := work_with_cookie.ExtractUID(r.Cookies())
-		//if err != nil {
-		//	http.Error(w, err.Error(), http.StatusInternalServerError)
-		//}
-		//encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
-
 		uid, err := work_with_cookie.ExtractUID(r.Cookies())
 		if err != nil {
 			uid = work_with_cookie.UserID()
@@ -116,11 +104,6 @@ func shorten(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-
-		//encryptedUUID, err := work_with_cookie.ExtractUID(r.Cookies())
-		//if err != nil {
-		//	http.Error(w, err.Error(), http.StatusInternalServerError)
-		//}
 
 		uid, err := work_with_cookie.ExtractUID(r.Cookies())
 		if err != nil {
