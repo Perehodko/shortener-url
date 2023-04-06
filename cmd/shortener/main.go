@@ -80,6 +80,7 @@ func redirectTo(s storage.Storage) func(w http.ResponseWriter, r *http.Request) 
 		uid, err := work_with_cookie.ExtractUID(r.Cookies())
 		if err != nil {
 			uid = work_with_cookie.UserID()
+			work_with_cookie.SetUUIDCookie(w, uid)
 		}
 		fmt.Println("redirectTo - uid", uid)
 
@@ -91,7 +92,6 @@ func redirectTo(s storage.Storage) func(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 
-		work_with_cookie.SetUUIDCookie(w, uid)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("Location", initialURL)
