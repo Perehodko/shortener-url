@@ -191,11 +191,9 @@ func SetUUIDCookie(w http.ResponseWriter, uid string) {
 	fmt.Println("workWithCookie - UUIDEncrypted, uid", EncryptedUUID(uid), uid)
 
 	http.SetCookie(w, &http.Cookie{
-		Name:     "session",
-		Value:    UUIDEncrypted,
-		MaxAge:   10000,
-		SameSite: http.SameSiteNoneMode,
-		Secure:   false,
+		Name:   "session",
+		Value:  UUIDEncrypted,
+		MaxAge: 10000,
 	})
 }
 

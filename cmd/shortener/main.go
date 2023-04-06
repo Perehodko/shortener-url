@@ -47,6 +47,7 @@ func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request
 
 		shortLink := utils.GenerateRandomString()
 		shortURL := cfg.BaseURL + "/" + shortLink
+		fmt.Println("getURLForCut -- shortURL", shortURL)
 
 		//записываем в мапу пару shortLink:оригинальная ссылка
 		//err = s.PutURL(shortLink, urlForCuts)
@@ -73,6 +74,9 @@ func redirectTo(s storage.Storage) func(w http.ResponseWriter, r *http.Request) 
 		shortURL := chi.URLParam(r, "id")
 		fmt.Println("shortURL", shortURL)
 
+		a, b := r.Cookie("session")
+		fmt.Println("redirectTo -- session cookie - a, b", a, b)
+
 		uid, err := work_with_cookie.ExtractUID(r.Cookies())
 		if err != nil {
 			uid = work_with_cookie.UserID()
@@ -80,9 +84,9 @@ func redirectTo(s storage.Storage) func(w http.ResponseWriter, r *http.Request) 
 		fmt.Println("redirectTo - uid", uid)
 
 		initialURL, err := s.GetURL(uid, shortURL)
-		fmt.Println("initialURL, shortURL", initialURL, shortURL)
+		fmt.Println("redirectTo -- initialURL, shortURL", initialURL, shortURL)
 		fmt.Println("err", err)
-		if err != nil || initialURL == "" {
+		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
