@@ -80,9 +80,9 @@ func redirectTo(s storage.Storage) func(w http.ResponseWriter, r *http.Request) 
 		fmt.Println("redirectTo - uid", uid)
 
 		initialURL, err := s.GetURL(uid, shortURL)
-		//fmt.Println("encryptedUUID, initialURL, shortURL, c", encryptedUUID, initialURL, shortURL)
+		fmt.Println("initialURL, shortURL", initialURL, shortURL)
 		fmt.Println("err", err)
-		if err != nil {
+		if err != nil || initialURL == "" {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
