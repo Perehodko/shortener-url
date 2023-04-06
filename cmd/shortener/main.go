@@ -27,7 +27,6 @@ var cfg Config
 func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(http.StatusCreated)
 
 		uid, err := work_with_cookie.ExtractUID(r.Cookies())
 		if err != nil {
@@ -57,6 +56,7 @@ func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request
 		}
 
 		work_with_cookie.SetUUIDCookie(w, uid)
+		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte(shortURL))
 	}
 }
