@@ -11,6 +11,7 @@ import (
 	"github.com/caarlos0/env/v6"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/google/uuid"
 	"io"
 	"log"
 	"net/http"
@@ -24,7 +25,7 @@ type Config struct {
 
 var cfg Config
 
-func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
+func getURLForCut(s storage.Storage, uuidSTR string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 
@@ -51,7 +52,7 @@ func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request
 
 		//записываем в мапу пару shortLink:оригинальная ссылка
 		//err = s.PutURL(shortLink, urlForCuts)
-		err = s.PutURL("1", shortLink, urlForCuts)
+		err = s.PutURL(uuidSTR, shortLink, urlForCuts)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 			return
@@ -69,7 +70,7 @@ func notFoundFunc(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Not found"))
 }
 
-func redirectTo(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
+func redirectTo(s storage.Storage, uuidSTR string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		shortURL := chi.URLParam(r, "id")
 		fmt.Println("shortURL", shortURL)
@@ -83,7 +84,7 @@ func redirectTo(s storage.Storage) func(w http.ResponseWriter, r *http.Request) 
 		}
 		fmt.Println("redirectTo - uid", uid)
 
-		initialURL, err := s.GetURL("1", shortURL)
+		initialURL, err := s.GetURL(uuidSTR, shortURL)
 		fmt.Println("redirectTo -- initialURL, shortURL", initialURL, shortURL)
 		fmt.Println("err", err)
 		if err != nil {
@@ -217,6 +218,9 @@ func main() {
 
 	//var key, _ = work_with_cookie.GenerateRandom(32)
 
+	UUID := uuid.New()
+	uuidSTR := UUID.String()
+
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
 	fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
@@ -254,8 +258,8 @@ func main() {
 		middleware.Compress(5),
 		middlewares.Decompress)
 
-	r.Post("/", getURLForCut(fileStorage))
-	r.Get("/{id}", redirectTo(fileStorage))
+	r.Post("/", getURLForCut(fileStorage, uuidSTR))
+	r.Get("/{id}", redirectTo(fileStorage, uuidSTR))
 	r.Get("/", notFoundFunc)
 	r.Post("/api/shorten", shorten(fileStorage))
 	r.Get("/api/user/urls", getUserURLs(fileStorage))
