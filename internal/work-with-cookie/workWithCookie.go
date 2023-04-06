@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"net/http"
 	"strings"
+	"time"
 )
 
 func GenerateRandom(size int) ([]byte, error) {
@@ -149,9 +150,10 @@ var secret = "secretForEncrypt" // Прочитать из env/конфига
 // EncryptedUUID вычисление HMAC-SHA256 для переданной строки
 func EncryptedUUID(data string) string {
 	secret, _ := GenerateRandom(32)
-	h := hmac.New(sha256.New, []byte(secret))
+	h := hmac.New(sha256.New, secret)
 	h.Write([]byte(data))
-	return hex.EncodeToString(h.Sum(nil))
+	EncryptedUUID := hex.EncodeToString(h.Sum(nil))
+	return EncryptedUUID
 }
 
 // CheckTokenIsValid проверка хеша
@@ -188,6 +190,7 @@ func ExtractUID(cookies []*http.Cookie) (string, error) {
 // SetUUIDCookie сохраняет в куку uuid пользователя вместе с его hmac
 func SetUUIDCookie(w http.ResponseWriter, uid string) {
 	UUIDEncrypted := fmt.Sprintf("%s:%s", uid, EncryptedUUID(uid))
+	fmt.Println("UUIDEncrypted", UUIDEncrypted)
 	fmt.Println("workWithCookie - UUIDEncrypted, uid", EncryptedUUID(uid), uid)
 
 	http.SetCookie(w, &http.Cookie{
@@ -195,4 +198,27 @@ func SetUUIDCookie(w http.ResponseWriter, uid string) {
 		Value:  UUIDEncrypted,
 		MaxAge: 3000000,
 	})
+}
+
+const charSet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+var seededRand = rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+
+// String генерирует случайную строку заданной длинны,
+// содержащую букво-циферную последовательность символов.
+func String(length int) string {
+	if length < 0 {
+		return ""
+	}
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charSet[seededRand.Intn(len(charSet))]
+	}
+	return string(b)
+}
+
+// UserID генерирует uid пользователя.
+// В будущем лучше заменить на https://pkg.go.dev/github.com/google/uuid
+func UserID() string {
+	return String(24)
 }

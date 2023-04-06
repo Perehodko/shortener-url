@@ -11,7 +11,6 @@ import (
 	"github.com/caarlos0/env/v6"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/google/uuid"
 	"io"
 	"log"
 	"net/http"
@@ -25,14 +24,14 @@ type Config struct {
 
 var cfg Config
 
-func getURLForCut(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
+func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusCreated)
 
 		uid, err := work_with_cookie.ExtractUID(r.Cookies())
 		if err != nil {
-			uid = UUID
+			uid = work_with_cookie.UserID()
 		}
 		//encryptedUUID, err := work_with_cookie.ExtractUID(r.Cookies())
 		//if err != nil {
@@ -73,7 +72,7 @@ func notFoundFunc(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Not found"))
 }
 
-func redirectTo(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
+func redirectTo(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		shortURL := chi.URLParam(r, "id")
 		fmt.Println("shortURL", shortURL)
@@ -87,7 +86,7 @@ func redirectTo(s storage.Storage, UUID string) func(w http.ResponseWriter, r *h
 
 		uid, err := work_with_cookie.ExtractUID(r.Cookies())
 		if err != nil {
-			uid = UUID
+			uid = work_with_cookie.UserID()
 		}
 
 		initialURL, err := s.GetURL(uid, shortURL)
@@ -113,7 +112,7 @@ type Res struct {
 	Result string `json:"result"`
 }
 
-func shorten(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
+func shorten(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
@@ -125,7 +124,7 @@ func shorten(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http
 
 		uid, err := work_with_cookie.ExtractUID(r.Cookies())
 		if err != nil {
-			uid = UUID
+			uid = work_with_cookie.UserID()
 		}
 
 		fmt.Println("shorten - uid", uid)
@@ -173,36 +172,29 @@ func NewStorage(fileName string) (storage.Storage, error) {
 	}
 }
 
-func getUserURLs(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
+func getUserURLs(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		uid, err := work_with_cookie.ExtractUID(r.Cookies())
-
-		//encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
-		uid = UUID
-		fmt.Println("getUserURLs - uid = UUID", uid)
-		getUserURLs, err := s.GetUserURLs(uid)
-		fmt.Println("getUserURLs", getUserURLs, len(getUserURLs), err)
-
-		if err != nil || len(getUserURLs) == 0 {
+		if err != nil {
 			http.Error(w, "no links", http.StatusNoContent)
 			return
 		}
-		//if err != nil {
-		//	fmt.Println("getUserURLs - uid-2", uid)
-		//	http.Error(w, "no links in storage at current UUID", http.StatusNoContent)
-		//	return
-		//}
-		//cookieIsValid := work_with_cookie.CheckKeyIsValid([]byte(key), encryptedUUIDKey, UUID, nonce)
-		//fmt.Println("cookieIsValid???", cookieIsValid)
 
-		//if err != nil {
-		//	//fmt.Println("err in if", err)
-		//	w.Header().Set("Content-Type", "application/json")
-		//	w.WriteHeader(http.StatusNoContent)
-		//} else {
+		//encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
+		fmt.Println("getUserURLs - uid = UUID", uid)
+		getUserURLs, err := s.GetUserURLs(uid)
+		fmt.Println("getUserURLs", getUserURLs, len(getUserURLs), err)
+		if err != nil {
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+		if len(getUserURLs) == 0 {
+			http.Error(w, "no links", http.StatusNoContent)
+			return
+		}
+
 		type M map[string]interface{}
-
 		var myMapSlice []M
 
 		for i, j := range getUserURLs {
@@ -211,8 +203,12 @@ func getUserURLs(s storage.Storage, UUID string) func(w http.ResponseWriter, r *
 		}
 
 		// or you could use `json.Marshal(myMapSlice)` if you want
-		myJson, _ := json.MarshalIndent(myMapSlice, "", "    ")
+		myJson, err := json.MarshalIndent(myMapSlice, "", "    ")
 		//fmt.Println(string(myJson))
+		if err != nil {
+			http.Error(w, "no links", http.StatusNoContent)
+			return
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(myJson)
@@ -227,8 +223,8 @@ func main() {
 
 	//fmt.Println("keyToFunc", keyToFunc)
 
-	uuid := uuid.New()
-	UUID := uuid.String()
+	//uuid := uuid.New()
+	//UUID := uuid.String()
 
 	//var key, _ = work_with_cookie.GenerateRandom(32)
 
@@ -269,11 +265,11 @@ func main() {
 		middleware.Compress(5),
 		middlewares.Decompress)
 
-	r.Post("/", getURLForCut(fileStorage, UUID))
-	r.Get("/{id}", redirectTo(fileStorage, UUID))
+	r.Post("/", getURLForCut(fileStorage))
+	r.Get("/{id}", redirectTo(fileStorage))
 	r.Get("/", notFoundFunc)
-	r.Post("/api/shorten", shorten(fileStorage, UUID))
-	r.Get("/api/user/urls", getUserURLs(fileStorage, UUID))
+	r.Post("/api/shorten", shorten(fileStorage))
+	r.Get("/api/user/urls", getUserURLs(fileStorage))
 
 	log.Fatal(http.ListenAndServe(ServerAddr, r))
 }
