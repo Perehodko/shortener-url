@@ -51,7 +51,7 @@ func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request
 
 		//записываем в мапу пару shortLink:оригинальная ссылка
 		//err = s.PutURL(shortLink, urlForCuts)
-		err = s.PutURL(uid, shortLink, urlForCuts)
+		err = s.PutURL("1", shortLink, urlForCuts)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 			return
@@ -83,7 +83,7 @@ func redirectTo(s storage.Storage) func(w http.ResponseWriter, r *http.Request) 
 		}
 		fmt.Println("redirectTo - uid", uid)
 
-		initialURL, err := s.GetURL(uid, shortURL)
+		initialURL, err := s.GetURL("1", shortURL)
 		fmt.Println("redirectTo -- initialURL, shortURL", initialURL, shortURL)
 		fmt.Println("err", err)
 		if err != nil {
@@ -133,7 +133,7 @@ func shorten(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
 		shortLink := utils.GenerateRandomString()
 		shortURL := cfg.BaseURL + "/" + shortLink
 
-		err = s.PutURL(uid, shortLink, urlForCuts)
+		err = s.PutURL("1", shortLink, urlForCuts)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 			return
@@ -172,10 +172,10 @@ func getUserURLs(s storage.Storage) func(w http.ResponseWriter, r *http.Request)
 
 		//encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
 		fmt.Println("getUserURLs - uid = UUID", uid)
-		getUserURLs, err := s.GetUserURLs(uid)
+		getUserURLs, err := s.GetUserURLs("1")
 		fmt.Println("getUserURLs", getUserURLs, len(getUserURLs), err)
 		if err != nil {
-			http.Error(w, "internal error", http.StatusInternalServerError)
+			http.Error(w, "internal error", http.StatusNoContent)
 			return
 		}
 		if len(getUserURLs) == 0 {
