@@ -219,7 +219,7 @@ func main() {
 
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
-	fileStoragePath := flag.String("f", "", "FILE_STORAGE_PATH из cl")
+	fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
 	flag.Parse()
 
 	// вставляем в структуру cfg значения из флагов
