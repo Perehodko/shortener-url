@@ -92,9 +92,9 @@ func redirectTo(s storage.Storage) func(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 
-		w.WriteHeader(http.StatusTemporaryRedirect)
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("Location", initialURL)
+		w.WriteHeader(http.StatusTemporaryRedirect)
 	}
 }
 
