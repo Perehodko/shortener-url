@@ -133,7 +133,7 @@ func shorten(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
 		shortLink := utils.GenerateRandomString()
 		shortURL := cfg.BaseURL + "/" + shortLink
 
-		err = s.PutURL("1", shortLink, urlForCuts)
+		err = s.PutURL(uid, shortLink, urlForCuts)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 			return
@@ -172,7 +172,7 @@ func getUserURLs(s storage.Storage) func(w http.ResponseWriter, r *http.Request)
 
 		//encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
 		fmt.Println("getUserURLs - uid = UUID", uid)
-		getUserURLs, err := s.GetUserURLs("1")
+		getUserURLs, err := s.GetUserURLs(uid)
 		fmt.Println("getUserURLs", getUserURLs, len(getUserURLs), err)
 		if err != nil {
 			http.Error(w, "internal error", http.StatusNoContent)
