@@ -12,15 +12,6 @@ import (
 	"time"
 )
 
-func GenerateRandom(size int) ([]byte, error) {
-	b := make([]byte, size)
-	_, err := rand.Read(b)
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
 //// EncryptedUUID шифрует UUID и возвращает зашифрованный массив байт
 //func EncryptedUUID() ([]byte, error, []byte, string, []byte) {
 //	UUID := uuid.New()
@@ -137,13 +128,7 @@ func GenerateRandom(size int) ([]byte, error) {
 //	})
 //}
 
-var (
-	ErrInvalidCookieValue  = errors.New("invalid cookie value")
-	ErrInvalidCookieDigest = errors.New("invalid cookie digest")
-	ErrNoCookie            = errors.New("no cookie")
-)
-
-var secret = "secretForEncrypt" // Прочитать из env/конфига
+var secret = "secretForEncrypt"
 
 // EncryptedUUID вычисление HMAC-SHA256 для переданной строки
 func EncryptedUUID(data string) string {
@@ -161,7 +146,8 @@ func CheckTokenIsValid(data string, hash string) bool {
 	if err != nil {
 		return false
 	}
-	return hmac.Equal(sign, h.Sum(nil))
+	isEqual := hmac.Equal(sign, h.Sum(nil))
+	return isEqual
 }
 
 // ExtractUID извлекает из куки uid пользователя и валидирует его.
@@ -178,7 +164,7 @@ func ExtractUID(cookies []*http.Cookie) (string, error) {
 			if CheckTokenIsValid(UUID, hash) {
 				return UUID, nil
 			}
-			return "", ErrInvalidCookieDigest
+			return "", errors.New("invalid cookie digest")
 		}
 	}
 	return "", errors.New("no cookie")
@@ -187,8 +173,6 @@ func ExtractUID(cookies []*http.Cookie) (string, error) {
 // SetUUIDCookie сохраняет в куку uuid пользователя вместе с его hmac
 func SetUUIDCookie(w http.ResponseWriter, uid string) {
 	UUIDEncrypted := fmt.Sprintf("%s:%s", uid, EncryptedUUID(uid))
-	fmt.Println("UUIDEncrypted", UUIDEncrypted)
-	fmt.Println("workwithcookie - UUIDEncrypted, uid", EncryptedUUID(uid), uid)
 
 	http.SetCookie(w, &http.Cookie{
 		Name:   "session",
@@ -203,19 +187,40 @@ var seededRand = rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
 // String генерирует случайную строку заданной длинны,
 // содержащую букво-циферную последовательность символов.
-func String(length int) string {
-	if length < 0 {
-		return ""
-	}
-	b := make([]byte, length)
-	for i := range b {
-		b[i] = charSet[seededRand.Intn(len(charSet))]
-	}
-	return string(b)
-}
+//func String(length int) string {
+//	if length < 0 {
+//		return ""
+//	}
+//	b := make([]byte, length)
+//	for i := range b {
+//		b[i] = charSet[seededRand.Intn(len(charSet))]
+//	}
+//	return string(b)
+//}
 
 // UserID генерирует uid пользователя.
 // В будущем лучше заменить на https://pkg.go.dev/github.com/google/uuid
 func UserID() string {
-	return String(24)
+	return GenerateRandomString(32)
+}
+
+func GenerateRandomString(size int) string {
+	if size < 0 {
+		return ""
+	}
+	b := make([]byte, size)
+	for i := range b {
+		b[i] = charSet[seededRand.Intn(len(charSet))]
+	}
+	return string(b)
+
+}
+
+func GenerateRandom(size int) ([]byte, error) {
+	b := make([]byte, size)
+	_, err := rand.Read(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }

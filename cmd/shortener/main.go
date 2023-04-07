@@ -31,7 +31,7 @@ func getURLForCut(s storage.Storage, UUID string) func(w http.ResponseWriter, r 
 
 		uid, err := workwithcookie.ExtractUID(r.Cookies())
 		if err != nil {
-			uid = workwithcookie.UserID()
+			uid = UUID
 		}
 		fmt.Println("getURLForCut - uid", uid)
 
@@ -75,7 +75,7 @@ func redirectTo(s storage.Storage, UUID string) func(w http.ResponseWriter, r *h
 
 		uid, err := workwithcookie.ExtractUID(r.Cookies())
 		if err != nil {
-			uid = workwithcookie.UserID()
+			uid = UUID
 		}
 
 		initialURL, err := s.GetURL(UUID, shortURL)
@@ -104,7 +104,7 @@ func shorten(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http
 
 		uid, err := workwithcookie.ExtractUID(r.Cookies())
 		if err != nil {
-			uid = workwithcookie.UserID()
+			uid = UUID
 		}
 
 		decoder := json.NewDecoder(r.Body)
