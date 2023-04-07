@@ -150,6 +150,13 @@ func NewStorage(fileName string) (storage.Storage, error) {
 
 func getUserURLs(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		uid, err := workwithcookie.ExtractUID(r.Cookies())
+		if err != nil {
+			http.Error(w, "no links", http.StatusNoContent)
+			return
+		}
+
 		getUserURLs, err := s.GetUserURLs(UUID)
 		if err != nil {
 			http.Error(w, "internal error", http.StatusNoContent)
@@ -175,6 +182,7 @@ func getUserURLs(s storage.Storage, UUID string) func(w http.ResponseWriter, r *
 			return
 		}
 
+		workwithcookie.SetUUIDCookie(w, uid)
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(myJSON)
 		w.WriteHeader(http.StatusOK)
