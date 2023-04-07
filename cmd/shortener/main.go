@@ -64,8 +64,12 @@ func notFoundFunc(w http.ResponseWriter, r *http.Request) {
 
 func redirectTo(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		uid, err := workwithcookie.ExtractUID(r.Cookies())
+		if err != nil {
+			uid = workwithcookie.UserID()
+		}
+
 		shortURL := chi.URLParam(r, "id")
-		fmt.Println("shortURL", shortURL)
 
 		initialURL, err := s.GetURL(UUID, shortURL)
 		if err != nil {
@@ -73,6 +77,7 @@ func redirectTo(s storage.Storage, UUID string) func(w http.ResponseWriter, r *h
 			return
 		}
 
+		workwithcookie.SetUUIDCookie(w, uid)
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("Location", initialURL)
 		w.WriteHeader(http.StatusTemporaryRedirect)
