@@ -29,6 +29,12 @@ func getURLForCut(s storage.Storage, UUID string) func(w http.ResponseWriter, r 
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 
+		uid, err := workwithcookie.ExtractUID(r.Cookies())
+		if err != nil {
+			uid = workwithcookie.UserID()
+		}
+		fmt.Println("getURLForCut - uid", uid)
+
 		// читаем Body
 		defer r.Body.Close()
 		bodyData, err := io.ReadAll(r.Body)
@@ -51,6 +57,7 @@ func getURLForCut(s storage.Storage, UUID string) func(w http.ResponseWriter, r 
 			return
 		}
 
+		workwithcookie.SetUUIDCookie(w, uid)
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte(shortURL))
 	}
@@ -64,12 +71,12 @@ func notFoundFunc(w http.ResponseWriter, r *http.Request) {
 
 func redirectTo(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		shortURL := chi.URLParam(r, "id")
+
 		uid, err := workwithcookie.ExtractUID(r.Cookies())
 		if err != nil {
 			uid = workwithcookie.UserID()
 		}
-
-		shortURL := chi.URLParam(r, "id")
 
 		initialURL, err := s.GetURL(UUID, shortURL)
 		if err != nil {
@@ -99,8 +106,6 @@ func shorten(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http
 		if err != nil {
 			uid = workwithcookie.UserID()
 		}
-
-		fmt.Println("shorten - uid", uid)
 
 		decoder := json.NewDecoder(r.Body)
 		var u URLStruct
@@ -146,7 +151,7 @@ func NewStorage(fileName string) (storage.Storage, error) {
 	}
 }
 
-func getUserURLs(s storage.Storage, uuidSTR string) func(w http.ResponseWriter, r *http.Request) {
+func getUserURLs(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		uid, err := workwithcookie.ExtractUID(r.Cookies())
@@ -154,9 +159,9 @@ func getUserURLs(s storage.Storage, uuidSTR string) func(w http.ResponseWriter, 
 			http.Error(w, "no links", http.StatusNoContent)
 			return
 		}
+		fmt.Println(uid)
 
-		fmt.Println("getUserURLs - uid = UUID", uid)
-		getUserURLs, err := s.GetUserURLs(uuidSTR)
+		getUserURLs, err := s.GetUserURLs(UUID)
 		fmt.Println("getUserURLs", getUserURLs, len(getUserURLs), err)
 		if err != nil {
 			http.Error(w, "internal error", http.StatusNoContent)
