@@ -24,7 +24,6 @@ func (s *URLStorage) PutURL(uid, shortLink, urlForCuts string) error {
 }
 
 func (s *URLStorage) GetURL(uid, shortLink string) (string, error) {
-	//fmt.Println("getUrl -- uid, shortLink, s.URLs[uid]", uid, shortLink, s.URLs[uid], len(s.URLs[uid]))
 	if len(s.URLs[uid]) == 0 {
 		return "", errors.New("in map no shortURL from request")
 	} else {

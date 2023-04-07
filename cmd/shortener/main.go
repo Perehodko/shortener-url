@@ -25,15 +25,9 @@ type Config struct {
 
 var cfg Config
 
-func getURLForCut(s storage.Storage, uuidSTR string) func(w http.ResponseWriter, r *http.Request) {
+func getURLForCut(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-
-		uid, err := workwithcookie.ExtractUID(r.Cookies())
-		if err != nil {
-			uid = workwithcookie.UserID()
-		}
-		fmt.Println("getURLForCut - uid", uid)
 
 		// читаем Body
 		defer r.Body.Close()
@@ -50,15 +44,13 @@ func getURLForCut(s storage.Storage, uuidSTR string) func(w http.ResponseWriter,
 		shortURL := cfg.BaseURL + "/" + shortLink
 		fmt.Println("getURLForCut -- shortURL", shortURL)
 
-		//записываем в мапу пару shortLink:оригинальная ссылка
-		//err = s.PutURL(shortLink, urlForCuts)
-		err = s.PutURL(uuidSTR, shortLink, urlForCuts)
+		//записываем в мапу s.URLs[UUID] = map[shortLink]urlForCuts{}
+		err = s.PutURL(UUID, shortLink, urlForCuts)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 			return
 		}
 
-		workwithcookie.SetUUIDCookie(w, uid)
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte(shortURL))
 	}
@@ -70,29 +62,17 @@ func notFoundFunc(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Not found"))
 }
 
-func redirectTo(s storage.Storage, uuidSTR string) func(w http.ResponseWriter, r *http.Request) {
+func redirectTo(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		shortURL := chi.URLParam(r, "id")
 		fmt.Println("shortURL", shortURL)
 
-		a, b := r.Cookie("session")
-		fmt.Println("redirectTo -- session cookie - a, b", a, b)
-
-		uid, err := workwithcookie.ExtractUID(r.Cookies())
-		if err != nil {
-			uid = workwithcookie.UserID()
-		}
-		fmt.Println("redirectTo - uid", uid)
-
-		initialURL, err := s.GetURL(uuidSTR, shortURL)
-		fmt.Println("redirectTo -- initialURL, shortURL", initialURL, shortURL)
-		fmt.Println("err", err)
+		initialURL, err := s.GetURL(UUID, shortURL)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		workwithcookie.SetUUIDCookie(w, uid)
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("Location", initialURL)
 		w.WriteHeader(http.StatusTemporaryRedirect)
@@ -107,7 +87,7 @@ type Res struct {
 	Result string `json:"result"`
 }
 
-func shorten(s storage.Storage, uuidSTR string) func(w http.ResponseWriter, r *http.Request) {
+func shorten(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		uid, err := workwithcookie.ExtractUID(r.Cookies())
@@ -127,12 +107,11 @@ func shorten(s storage.Storage, uuidSTR string) func(w http.ResponseWriter, r *h
 		}
 		//получаю из хранилища результат
 		urlForCuts := u.URL
-		//fmt.Println("urlForCuts-shoren", urlForCuts)
 
 		shortLink := utils.GenerateRandomString()
 		shortURL := cfg.BaseURL + "/" + shortLink
 
-		err = s.PutURL(uuidSTR, shortLink, urlForCuts)
+		err = s.PutURL(UUID, shortLink, urlForCuts)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 			return
@@ -171,7 +150,6 @@ func getUserURLs(s storage.Storage, uuidSTR string) func(w http.ResponseWriter, 
 			return
 		}
 
-		//encryptedUUIDStr := fmt.Sprintf("%x", encryptedUUID)
 		fmt.Println("getUserURLs - uid = UUID", uid)
 		getUserURLs, err := s.GetUserURLs(uuidSTR)
 		fmt.Println("getUserURLs", getUserURLs, len(getUserURLs), err)
@@ -184,6 +162,7 @@ func getUserURLs(s storage.Storage, uuidSTR string) func(w http.ResponseWriter, 
 			return
 		}
 
+		// мапа для пар short_url:original_url из хранилища
 		type M map[string]interface{}
 		var myMapSlice []M
 
@@ -191,15 +170,14 @@ func getUserURLs(s storage.Storage, uuidSTR string) func(w http.ResponseWriter, 
 			res := M{"short_url": cfg.BaseURL + "/" + i, "original_url": j}
 			myMapSlice = append(myMapSlice, res)
 		}
-
-		// or you could use `json.Marshal(myMapSlice)` if you want
+		//преобразуем в нужный формат
 		myJSON, err := json.MarshalIndent(myMapSlice, "", "    ")
-		//fmt.Println(string(myJSON))
 		if err != nil {
 			http.Error(w, "no links", http.StatusNoContent)
 			return
 		}
 
+		workwithcookie.SetUUIDCookie(w, uid)
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(myJSON)
 		w.WriteHeader(http.StatusOK)
@@ -208,18 +186,9 @@ func getUserURLs(s storage.Storage, uuidSTR string) func(w http.ResponseWriter, 
 }
 
 func main() {
-	//encryptedUUIDKey, _, key, UUID, nonce := work_with_cookie.EncryptedUUID()
-	//keyToFunc := fmt.Sprintf("%x", encryptedUUIDKey)
-
-	//fmt.Println("keyToFunc", keyToFunc)
-
-	//uuid := uuid.New()
-	//UUID := uuid.String()
-
-	//var key, _ = work_with_cookie.GenerateRandom(32)
-
+	// получаем UUID
 	UUID := uuid.New()
-	uuidSTR := UUID.String()
+	UUIDStr := UUID.String()
 
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
@@ -258,11 +227,11 @@ func main() {
 		middleware.Compress(5),
 		middlewares.Decompress)
 
-	r.Post("/", getURLForCut(fileStorage, uuidSTR))
-	r.Get("/{id}", redirectTo(fileStorage, uuidSTR))
+	r.Post("/", getURLForCut(fileStorage, UUIDStr))
+	r.Get("/{id}", redirectTo(fileStorage, UUIDStr))
 	r.Get("/", notFoundFunc)
-	r.Post("/api/shorten", shorten(fileStorage, uuidSTR))
-	r.Get("/api/user/urls", getUserURLs(fileStorage, uuidSTR))
+	r.Post("/api/shorten", shorten(fileStorage, UUIDStr))
+	r.Get("/api/user/urls", getUserURLs(fileStorage, UUIDStr))
 
 	log.Fatal(http.ListenAndServe(ServerAddr, r))
 }
