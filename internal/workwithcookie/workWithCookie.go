@@ -40,13 +40,13 @@ func ExtractUID(cookies []*http.Cookie) (string, error) {
 		if cookie.Name == "session" {
 			parts := strings.Split(cookie.Value, ":")
 			if len(parts) != 2 {
-				return "", errors.New("no cookie with session name")
+				return "", errors.New("no cookie with need name")
 			}
 			UUID, hash := parts[0], parts[1]
 			if CheckTokenIsValid(UUID, hash) {
 				return UUID, nil
 			}
-			return "", errors.New("invalid cookie digest")
+			return "", errors.New("invalid cookie")
 		}
 	}
 	return "", errors.New("no cookie")

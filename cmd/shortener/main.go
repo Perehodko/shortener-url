@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"github.com/Perehodko/shortener-url/internal/middlewares"
 	"github.com/Perehodko/shortener-url/internal/storage"
 	"github.com/Perehodko/shortener-url/internal/utils"
@@ -33,7 +32,6 @@ func getURLForCut(s storage.Storage, UUID string) func(w http.ResponseWriter, r 
 		if err != nil {
 			uid = UUID
 		}
-		fmt.Println("getURLForCut - uid", uid)
 
 		// читаем Body
 		defer r.Body.Close()
@@ -48,7 +46,6 @@ func getURLForCut(s storage.Storage, UUID string) func(w http.ResponseWriter, r 
 
 		shortLink := utils.GenerateRandomString()
 		shortURL := cfg.BaseURL + "/" + shortLink
-		fmt.Println("getURLForCut -- shortURL", shortURL)
 
 		//записываем в мапу s.URLs[UUID] = map[shortLink]urlForCuts{}
 		err = s.PutURL(UUID, shortLink, urlForCuts)
@@ -159,10 +156,8 @@ func getUserURLs(s storage.Storage, UUID string) func(w http.ResponseWriter, r *
 			http.Error(w, "no links", http.StatusNoContent)
 			return
 		}
-		fmt.Println(uid)
 
 		getUserURLs, err := s.GetUserURLs(UUID)
-		fmt.Println("getUserURLs", getUserURLs, len(getUserURLs), err)
 		if err != nil {
 			http.Error(w, "internal error", http.StatusNoContent)
 			return
