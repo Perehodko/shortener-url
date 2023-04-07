@@ -6,9 +6,11 @@ import (
 	"github.com/Perehodko/shortener-url/internal/middlewares"
 	"github.com/Perehodko/shortener-url/internal/storage"
 	"github.com/Perehodko/shortener-url/internal/utils"
+	"github.com/Perehodko/shortener-url/internal/workwithcookie"
 	"github.com/caarlos0/env/v6"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/google/uuid"
 	"io"
 	"log"
 	"net/http"
@@ -22,10 +24,14 @@ type Config struct {
 
 var cfg Config
 
-func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
+func getURLForCut(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(http.StatusCreated)
+
+		uid, err := workwithcookie.ExtractUID(r.Cookies())
+		if err != nil {
+			uid = UUID
+		}
 
 		// читаем Body
 		defer r.Body.Close()
@@ -41,12 +47,15 @@ func getURLForCut(s storage.Storage) func(w http.ResponseWriter, r *http.Request
 		shortLink := utils.GenerateRandomString()
 		shortURL := cfg.BaseURL + "/" + shortLink
 
-		//записываем в мапу пару shortLink:оригинальная ссылка
-		err = s.PutURL(shortLink, urlForCuts)
+		//записываем в мапу s.URLs[UUID] = map[shortLink]urlForCuts{}
+		err = s.PutURL(UUID, shortLink, urlForCuts)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 			return
 		}
+
+		workwithcookie.SetUUIDCookie(w, uid)
+		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte(shortURL))
 	}
 }
@@ -57,16 +66,22 @@ func notFoundFunc(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Not found"))
 }
 
-func redirectTo(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
+func redirectTo(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		shortURL := chi.URLParam(r, "id")
-		initialURL, err := s.GetURL(shortURL)
 
+		uid, err := workwithcookie.ExtractUID(r.Cookies())
 		if err != nil {
-			http.Error(w, err.Error(), 400)
+			uid = UUID
+		}
+
+		initialURL, err := s.GetURL(UUID, shortURL)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
+		workwithcookie.SetUUIDCookie(w, uid)
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("Location", initialURL)
 		w.WriteHeader(http.StatusTemporaryRedirect)
@@ -81,18 +96,21 @@ type Res struct {
 	Result string `json:"result"`
 }
 
-func shorten(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
+func shorten(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
 
-		w.WriteHeader(http.StatusCreated)
+		uid, err := workwithcookie.ExtractUID(r.Cookies())
+		if err != nil {
+			uid = UUID
+		}
 
 		decoder := json.NewDecoder(r.Body)
 		var u URLStruct
 
-		err := decoder.Decode(&u)
+		err = decoder.Decode(&u)
 		if err != nil {
-			panic(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		//получаю из хранилища результат
 		urlForCuts := u.URL
@@ -100,8 +118,7 @@ func shorten(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
 		shortLink := utils.GenerateRandomString()
 		shortURL := cfg.BaseURL + "/" + shortLink
 
-		//записываем в мапу пару shortLink:оригинальная ссылка
-		err = s.PutURL(shortLink, urlForCuts)
+		err = s.PutURL(UUID, shortLink, urlForCuts)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 			return
@@ -113,6 +130,10 @@ func shorten(s storage.Storage) func(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
+
+		workwithcookie.SetUUIDCookie(w, uid)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
 		w.Write(txBz)
 	}
 }
@@ -127,7 +148,53 @@ func NewStorage(fileName string) (storage.Storage, error) {
 	}
 }
 
+func getUserURLs(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		uid, err := workwithcookie.ExtractUID(r.Cookies())
+		if err != nil {
+			http.Error(w, "no links", http.StatusNoContent)
+			return
+		}
+
+		getUserURLs, err := s.GetUserURLs(UUID)
+		if err != nil {
+			http.Error(w, "internal error", http.StatusNoContent)
+			return
+		}
+		if len(getUserURLs) == 0 {
+			http.Error(w, "no links", http.StatusNoContent)
+			return
+		}
+
+		// мапа для пар short_url:original_url из хранилища
+		type M map[string]interface{}
+		var myMapSlice []M
+
+		for i, j := range getUserURLs {
+			res := M{"short_url": cfg.BaseURL + "/" + i, "original_url": j}
+			myMapSlice = append(myMapSlice, res)
+		}
+		//преобразуем в нужный формат
+		myJSON, err := json.MarshalIndent(myMapSlice, "", "    ")
+		if err != nil {
+			http.Error(w, "no links", http.StatusNoContent)
+			return
+		}
+
+		workwithcookie.SetUUIDCookie(w, uid)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(myJSON)
+		w.WriteHeader(http.StatusOK)
+
+	}
+}
+
 func main() {
+	// получаем UUID
+	UUID := uuid.New()
+	UUIDStr := UUID.String()
+
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
 	fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
@@ -165,10 +232,11 @@ func main() {
 		middleware.Compress(5),
 		middlewares.Decompress)
 
-	r.Post("/", getURLForCut(fileStorage))
-	r.Get("/{id}", redirectTo(fileStorage))
+	r.Post("/", getURLForCut(fileStorage, UUIDStr))
+	r.Get("/{id}", redirectTo(fileStorage, UUIDStr))
 	r.Get("/", notFoundFunc)
-	r.Post("/api/shorten", shorten(fileStorage))
+	r.Post("/api/shorten", shorten(fileStorage, UUIDStr))
+	r.Get("/api/user/urls", getUserURLs(fileStorage, UUIDStr))
 
 	log.Fatal(http.ListenAndServe(ServerAddr, r))
 }
