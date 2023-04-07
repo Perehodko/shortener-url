@@ -182,7 +182,7 @@ func getUserURLs(s storage.Storage, uuidSTR string) func(w http.ResponseWriter, 
 			return
 		}
 
-		workwithcookie.SetUUIDCookie(w, uid)
+		//workwithcookie.SetUUIDCookie(w, uid)
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(myJSON)
 		w.WriteHeader(http.StatusOK)
