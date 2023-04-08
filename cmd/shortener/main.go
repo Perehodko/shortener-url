@@ -16,7 +16,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"time"
 )
 
 type Config struct {
@@ -194,24 +193,18 @@ func getUserURLs(s storage.Storage, UUID string) func(w http.ResponseWriter, r *
 	}
 }
 
+var db *sql.DB
+
 func PingDB(ctx context.Context) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		db, err := sql.Open("sqlite3",
-			"db_test.db")
+			"db.db")
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
+
 		}
-		defer db.Close()
-		// работаем с базой
-		// ...
-
-		// можем продиагностировать соединение
-		ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
-		defer cancel()
-		if err = db.PingContext(ctx); err != nil {
+		if db.Ping() != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-
 		}
 		w.WriteHeader(http.StatusOK)
 	}
