@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"flag"
 	"github.com/Perehodko/shortener-url/internal/middlewares"
@@ -14,12 +16,14 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 )
 
 type Config struct {
 	ServerAddress string `env:"SERVER_ADDRESS"`
 	BaseURL       string `env:"BASE_URL"`
 	FileName      string `env:"FILE_STORAGE_PATH"`
+	dbAddress     string `env:"DATABASE_DSN"`
 }
 
 var cfg Config
@@ -190,6 +194,29 @@ func getUserURLs(s storage.Storage, UUID string) func(w http.ResponseWriter, r *
 	}
 }
 
+func PingDB(ctx context.Context) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		db, err := sql.Open("sqlite3",
+			"db_test.db")
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		defer db.Close()
+		// работаем с базой
+		// ...
+
+		// можем продиагностировать соединение
+		ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+		defer cancel()
+		if err = db.PingContext(ctx); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+
+		}
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
 func main() {
 	// получаем UUID
 	UUID := uuid.New()
@@ -198,12 +225,14 @@ func main() {
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
 	fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
+	dbAddress := flag.String("c", "127.0.0.1", "DATABASE_DSN")
 	flag.Parse()
 
 	// вставляем в структуру cfg значения из флагов
 	cfg.ServerAddress = *severAddress
 	cfg.BaseURL = *baseURL
 	cfg.FileName = *fileStoragePath
+	cfg.dbAddress = *dbAddress
 
 	// перезатираем их значениями энвов
 	// если значения в энве для поля структуры нет - то в поле останется значение из флага
@@ -224,6 +253,8 @@ func main() {
 		ServerAddr = *severAddress
 	}
 
+	ctx := context.TODO()
+
 	// зададим встроенные middleware, чтобы улучшить стабильность приложения
 	r.Use(middleware.RequestID,
 		middleware.RealIP,
@@ -237,6 +268,7 @@ func main() {
 	r.Get("/", notFoundFunc)
 	r.Post("/api/shorten", shorten(fileStorage, UUIDStr))
 	r.Get("/api/user/urls", getUserURLs(fileStorage, UUIDStr))
+	r.Get("/ping", PingDB(ctx))
 
 	log.Fatal(http.ListenAndServe(ServerAddr, r))
 }
