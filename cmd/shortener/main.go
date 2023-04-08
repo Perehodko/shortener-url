@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"flag"
@@ -256,8 +255,6 @@ func main() {
 		ServerAddr = *severAddress
 	}
 
-	ctx := context.TODO()
-
 	// зададим встроенные middleware, чтобы улучшить стабильность приложения
 	r.Use(middleware.RequestID,
 		middleware.RealIP,
@@ -271,7 +268,7 @@ func main() {
 	r.Get("/", notFoundFunc)
 	r.Post("/api/shorten", shorten(fileStorage, UUIDStr))
 	r.Get("/api/user/urls", getUserURLs(fileStorage, UUIDStr))
-	r.Get("/ping", PingDB(ctx))
+	r.Get("/ping", PingDB())
 
 	initDB()
 
