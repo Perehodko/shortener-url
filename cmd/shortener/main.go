@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
+	_ "github.com/mattn/go-sqlite3"
 	"io"
 	"log"
 	"net/http"
@@ -195,13 +196,22 @@ func getUserURLs(s storage.Storage, UUID string) func(w http.ResponseWriter, r *
 
 var db *sql.DB
 
-func PingDB(ctx context.Context) func(w http.ResponseWriter, r *http.Request) {
+func initDB() {
+	var err error
+	// Connect to the postgres db
+	//you might have to change the connection string to add your database credentials
+	db, err = sql.Open("sqlite3", "mydb")
+	if err != nil {
+		panic(err)
+	}
+}
+
+func PingDB() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		db, err := sql.Open("sqlite3",
 			"db.db")
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-
+			error.Error(err)
 		}
 		if db.Ping() != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -262,6 +272,8 @@ func main() {
 	r.Post("/api/shorten", shorten(fileStorage, UUIDStr))
 	r.Get("/api/user/urls", getUserURLs(fileStorage, UUIDStr))
 	r.Get("/ping", PingDB(ctx))
+
+	initDB()
 
 	log.Fatal(http.ListenAndServe(ServerAddr, r))
 }
