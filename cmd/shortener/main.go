@@ -199,7 +199,7 @@ func initDB() {
 	var err error
 	// Connect to the postgres db
 	//you might have to change the connection string to add your database credentials
-	db, err = sql.Open("sqlite3", "mydb")
+	_, err = sql.Open("sqlite3", "mydb.db")
 	if err != nil {
 		panic(err)
 	}
@@ -207,6 +207,7 @@ func initDB() {
 
 func PingDB() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+
 		db, err := sql.Open("sqlite3",
 			"db.db")
 		if err != nil {
