@@ -198,8 +198,7 @@ var db *sql.DB
 func initDB() {
 	var err error
 	// Connect to the postgres db
-	//you might have to change the connection string to add your database credentials
-	_, err = sql.Open("sqlite3", "mydb.db")
+	_, err = sql.Open("sqlite3", "db.db")
 	if err != nil {
 		panic(err)
 	}
@@ -207,11 +206,9 @@ func initDB() {
 
 func PingDB() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		db, err := sql.Open("sqlite3",
-			"db.db")
+		db, err := sql.Open("sqlite3", "db.db")
 		if err != nil {
-			error.Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
 		}
 		if db.Ping() != nil {
 			w.WriteHeader(http.StatusInternalServerError)
