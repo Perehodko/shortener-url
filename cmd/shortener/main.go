@@ -232,10 +232,18 @@ func InitPostgresDB() {
 	fmt.Println("Successfully connected!")
 }
 
-func PingDBPostgres() func(w http.ResponseWriter, r *http.Request) {
+func PingDBPostgres(DBAddress string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		st := "host=localhost sslmode=disable dbname=postgres user=postgres password=password port=5432"
-		db, err := sql.Open("postgres", st)
+		host := DBAddress
+		const (
+			port     = 5432
+			user     = "postgres"
+			password = "password"
+			dbname   = "postgres"
+		)
+		//st := "host=localhost sslmode=disable dbname=postgres user=postgres password=password port=5432"
+		psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
+		db, err := sql.Open("postgres", psqlconn)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
@@ -283,6 +291,11 @@ func main() {
 		ServerAddr = *severAddress
 	}
 
+	DBAddress := cfg.dbAddress
+	if len(DBAddress) == 0 {
+		DBAddress = *dbAddress
+	}
+
 	// зададим встроенные middleware, чтобы улучшить стабильность приложения
 	r.Use(middleware.RequestID,
 		middleware.RealIP,
@@ -297,10 +310,10 @@ func main() {
 	r.Post("/api/shorten", shorten(fileStorage, UUIDStr))
 	r.Get("/api/user/urls", getUserURLs(fileStorage, UUIDStr))
 	//r.Get("/ping", PingDB())
-	r.Get("/ping", PingDBPostgres())
+	r.Get("/ping", PingDBPostgres(DBAddress))
 
 	//initDB()
-	InitPostgresDB()
+	//InitPostgresDB()
 
 	log.Fatal(http.ListenAndServe(ServerAddr, r))
 }
