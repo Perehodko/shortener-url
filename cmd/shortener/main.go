@@ -232,17 +232,17 @@ func InitPostgresDB() {
 	fmt.Println("Successfully connected!")
 }
 
-func PingDBPostgres(DBAddress string) func(w http.ResponseWriter, r *http.Request) {
+func PingDBPostgres(DBAddress, ServerAddr string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		host := DBAddress
+		port := ServerAddr
 		const (
-			port     = 5432
 			user     = "postgres"
 			password = "password"
 			dbname   = "postgres"
 		)
 		//st := "host=localhost sslmode=disable dbname=postgres user=postgres password=password port=5432"
-		psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
+		psqlconn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
 		db, err := sql.Open("postgres", psqlconn)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -310,7 +310,7 @@ func main() {
 	r.Post("/api/shorten", shorten(fileStorage, UUIDStr))
 	r.Get("/api/user/urls", getUserURLs(fileStorage, UUIDStr))
 	//r.Get("/ping", PingDB())
-	r.Get("/ping", PingDBPostgres(DBAddress))
+	r.Get("/ping", PingDBPostgres(DBAddress, ServerAddr))
 
 	//initDB()
 	//InitPostgresDB()
