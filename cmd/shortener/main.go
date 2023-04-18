@@ -55,7 +55,7 @@ func getURLForCut(s storage.Storage, UUID string) func(w http.ResponseWriter, r 
 		//записываем в мапу s.URLs[UUID] = map[shortLink]urlForCuts{}
 		err = s.PutURL(UUID, shortLink, urlForCuts)
 		if err != nil {
-			http.Error(w, err.Error(), 400)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -125,7 +125,7 @@ func shorten(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http
 
 		err = s.PutURL(UUID, shortLink, urlForCuts)
 		if err != nil {
-			http.Error(w, err.Error(), 400)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -195,55 +195,8 @@ func getUserURLs(s storage.Storage, UUID string) func(w http.ResponseWriter, r *
 	}
 }
 
-var db *sql.DB
-
-func initDB() {
-	var err error
-	// Connect to the postgres db
-	db, err = sql.Open("sqlite3", "db.db")
-	if err != nil {
-		panic(err)
-	}
-	defer db.Close()
-}
-
-func PingDB() func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		db, err := sql.Open("sqlite3", "Users.db")
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-		if db.Ping() != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-		defer db.Close()
-		w.WriteHeader(http.StatusOK)
-	}
-}
-
-func InitPostgresDB() {
-	st := "host=localhost sslmode=disable dbname=postgres user=postgres password=password port=5432"
-	db, err := sql.Open("postgres", st)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-
-	fmt.Println("Successfully connected!")
-}
-
 func PingDBPostgres(DBAddress string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		//const (
-		//	host     = "localhost"
-		//	port     = 5432
-		//	user     = "postgres"
-		//	password = "password"
-		//	dbname   = "postgres"
-		//)
-		////st := "host=localhost sslmode=disable dbname=postgres user=postgres password=password port=5432"
-		//psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
 		db, err := sql.Open("postgres", DBAddress)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -262,11 +215,11 @@ const (
 	user     = "postgres"
 	password = "password"
 	dbname   = "postgres"
+	sslmode  = "disable"
 )
 
 func main() {
-	//st := "host=localhost sslmode=disable dbname=postgres user=postgres password=password port=5432"
-	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
+	PSQLConn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s", host, port, user, password, dbname, sslmode)
 
 	// получаем UUID
 	UUID := uuid.New()
@@ -275,7 +228,7 @@ func main() {
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
 	fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
-	dbAddress := flag.String("d", psqlconn, "DATABASE_DSN")
+	dbAddress := flag.String("d", PSQLConn, "DATABASE_DSN")
 
 	flag.Parse()
 
@@ -322,11 +275,7 @@ func main() {
 	r.Get("/", notFoundFunc)
 	r.Post("/api/shorten", shorten(fileStorage, UUIDStr))
 	r.Get("/api/user/urls", getUserURLs(fileStorage, UUIDStr))
-	//r.Get("/ping", PingDB())
 	r.Get("/ping", PingDBPostgres(DBAddress))
-
-	//initDB()
-	//InitPostgresDB()
 
 	log.Fatal(http.ListenAndServe(ServerAddr, r))
 }
