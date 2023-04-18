@@ -232,18 +232,19 @@ func InitPostgresDB() {
 	fmt.Println("Successfully connected!")
 }
 
-func PingDBPostgres(DBAddress, ServerAddr string) func(w http.ResponseWriter, r *http.Request) {
+func PingDBPostgres(DBAddress string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		host := DBAddress
-		port := ServerAddr
-		const (
-			user     = "postgres"
-			password = "password"
-			dbname   = "postgres"
-		)
-		//st := "host=localhost sslmode=disable dbname=postgres user=postgres password=password port=5432"
-		psqlconn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
-		db, err := sql.Open("postgres", psqlconn)
+
+		//const (
+		//	host     = "localhost"
+		//	port     = 5432
+		//	user     = "postgres"
+		//	password = "password"
+		//	dbname   = "postgres"
+		//)
+		////st := "host=localhost sslmode=disable dbname=postgres user=postgres password=password port=5432"
+		//psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
+		db, err := sql.Open("postgres", DBAddress)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
@@ -255,7 +256,18 @@ func PingDBPostgres(DBAddress, ServerAddr string) func(w http.ResponseWriter, r 
 	}
 }
 
+const (
+	host     = "localhost"
+	port     = 5432
+	user     = "postgres"
+	password = "password"
+	dbname   = "postgres"
+)
+
 func main() {
+	//st := "host=localhost sslmode=disable dbname=postgres user=postgres password=password port=5432"
+	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
+
 	// получаем UUID
 	UUID := uuid.New()
 	UUIDStr := UUID.String()
@@ -263,7 +275,8 @@ func main() {
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
 	fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
-	dbAddress := flag.String("d", "127.0.0.1", "DATABASE_DSN")
+	dbAddress := flag.String("d", psqlconn, "DATABASE_DSN")
+
 	flag.Parse()
 
 	// вставляем в структуру cfg значения из флагов
@@ -310,7 +323,7 @@ func main() {
 	r.Post("/api/shorten", shorten(fileStorage, UUIDStr))
 	r.Get("/api/user/urls", getUserURLs(fileStorage, UUIDStr))
 	//r.Get("/ping", PingDB())
-	r.Get("/ping", PingDBPostgres(DBAddress, ServerAddr))
+	r.Get("/ping", PingDBPostgres(DBAddress))
 
 	//initDB()
 	//InitPostgresDB()
