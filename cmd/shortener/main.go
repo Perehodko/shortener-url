@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"github.com/Perehodko/shortener-url/internal/middlewares"
 	"github.com/Perehodko/shortener-url/internal/storage"
 	"github.com/Perehodko/shortener-url/internal/utils"
@@ -12,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
+	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 	"io"
 	"log"
@@ -198,21 +200,49 @@ var db *sql.DB
 func initDB() {
 	var err error
 	// Connect to the postgres db
-	_, err = sql.Open("sqlite3", "db.db")
+	db, err = sql.Open("sqlite3", "db.db")
 	if err != nil {
 		panic(err)
 	}
+	defer db.Close()
 }
 
 func PingDB() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		db, err := sql.Open("sqlite3", "db.db")
+		db, err := sql.Open("sqlite3", "Users.db")
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 		if db.Ping() != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
+		defer db.Close()
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func InitPostgresDB() {
+	st := "host=localhost sslmode=disable dbname=postgres user=postgres password=password port=5432"
+	db, err := sql.Open("postgres", st)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	fmt.Println("Successfully connected!")
+}
+
+func PingDBPostgres() func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		st := "host=localhost sslmode=disable dbname=postgres user=postgres password=password port=5432"
+		db, err := sql.Open("postgres", st)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		if db.Ping() != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		defer db.Close()
 		w.WriteHeader(http.StatusOK)
 	}
 }
@@ -266,9 +296,11 @@ func main() {
 	r.Get("/", notFoundFunc)
 	r.Post("/api/shorten", shorten(fileStorage, UUIDStr))
 	r.Get("/api/user/urls", getUserURLs(fileStorage, UUIDStr))
-	r.Get("/ping", PingDB())
+	//r.Get("/ping", PingDB())
+	r.Get("/ping", PingDBPostgres())
 
-	initDB()
+	//initDB()
+	InitPostgresDB()
 
 	log.Fatal(http.ListenAndServe(ServerAddr, r))
 }
