@@ -46,7 +46,7 @@ func (s *DBStorage) PutURL(uid, shortLink, urlForCuts string) error {
 
 func (s *DBStorage) GetURL(uid, shortLink string) (string, error) {
 	rows, err := s.db.Query(
-		"SELECT original_url FROM users_info WHERE uid=$1 and short_link=$2",
+		"SELECT uid, original_url FROM users_info WHERE uid=$1 and short_link=$2",
 		uid, shortLink)
 
 	if err != nil {
@@ -63,6 +63,7 @@ func (s *DBStorage) GetURL(uid, shortLink string) (string, error) {
 			log.Fatal(err)
 		}
 	}
+	fmt.Println("!!!!!originalUrl:", originalUrl)
 	if len(originalUrl) == 0 {
 		return "", errors.New("in DB no shortURL from request")
 	} else {
