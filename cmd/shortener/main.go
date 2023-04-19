@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"github.com/Perehodko/shortener-url/internal/DBStorage"
 	"github.com/Perehodko/shortener-url/internal/middlewares"
 	"github.com/Perehodko/shortener-url/internal/storage"
@@ -125,7 +124,6 @@ func shorten(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http
 		shortURL := cfg.BaseURL + "/" + shortLink
 
 		err = s.PutURL(UUID, shortLink, urlForCuts)
-		fmt.Println("shorten -- UUID, shortLink, urlForCuts", UUID, shortLink, urlForCuts)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -213,18 +211,7 @@ func PingDBPostgres(DBAddress string) func(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-const (
-	host     = "localhost"
-	port     = 5432
-	user     = "postgres"
-	password = "password"
-	dbname   = "postgres"
-	sslmode  = "disable"
-)
-
 func main() {
-	//PSQLConn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s", host, port, user, password, dbname, sslmode)
-	PSQLConn := ""
 	// получаем UUID
 	UUID := uuid.New()
 	UUIDStr := UUID.String()
@@ -232,7 +219,7 @@ func main() {
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
 	fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
-	dbAddress := flag.String("d", PSQLConn, "DATABASE_DSN")
+	dbAddress := flag.String("d", "", "DATABASE_DSN")
 	flag.Parse()
 
 	// вставляем в структуру cfg значения из флагов
@@ -250,16 +237,10 @@ func main() {
 
 	var s storage.Storage
 	if cfg.dbAddress != "" {
-		log.Println("SQL is using")
 		s = DBStorage.NewDBStorage(*dbAddress)
 	} else {
 		s, err = NewStorage(cfg.FileName)
 	}
-
-	//fileStorage, err := NewStorage(cfg.FileName)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
 
 	r := chi.NewRouter()
 
