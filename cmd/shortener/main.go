@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"flag"
-	"github.com/Perehodko/shortener-url/internal/DBStorage"
+	"github.com/Perehodko/shortener-url/internal/dbstorage"
 	"github.com/Perehodko/shortener-url/internal/middlewares"
 	"github.com/Perehodko/shortener-url/internal/storage"
 	"github.com/Perehodko/shortener-url/internal/utils"
@@ -237,9 +237,12 @@ func main() {
 
 	var s storage.Storage
 	if cfg.dbAddress != "" {
-		s = DBStorage.NewDBStorage(*dbAddress)
+		s = dbstorage.NewDBStorage(*dbAddress)
 	} else {
 		s, err = NewStorage(cfg.FileName)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	r := chi.NewRouter()
