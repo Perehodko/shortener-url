@@ -125,6 +125,7 @@ func shorten(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http
 		shortURL := cfg.BaseURL + "/" + shortLink
 
 		err = s.PutURL(UUID, shortLink, urlForCuts)
+		fmt.Println("shorten -- UUID, shortLink, urlForCuts", UUID, shortLink, urlForCuts)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -247,7 +248,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
+	fmt.Println("dbAddress!!!!!", dbAddress)
 	var s storage.Storage
 	if cfg.dbAddress != "" {
 		log.Println("SQL is using")
