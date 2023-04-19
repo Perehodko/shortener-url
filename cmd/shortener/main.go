@@ -223,8 +223,8 @@ const (
 )
 
 func main() {
-	PSQLConn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s", host, port, user, password, dbname, sslmode)
-
+	//PSQLConn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s", host, port, user, password, dbname, sslmode)
+	PSQLConn := ""
 	// получаем UUID
 	UUID := uuid.New()
 	UUIDStr := UUID.String()
@@ -233,7 +233,6 @@ func main() {
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
 	fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
 	dbAddress := flag.String("d", PSQLConn, "DATABASE_DSN")
-
 	flag.Parse()
 
 	// вставляем в структуру cfg значения из флагов
@@ -249,7 +248,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println("dbAddress!!!!!", dbAddress)
 	var s storage.Storage
 	if cfg.dbAddress != "" {
 		log.Println("SQL is using")
