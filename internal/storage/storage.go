@@ -14,6 +14,11 @@ type Storage interface {
 	GetUserURLs(uid string) (map[string]string, error)
 }
 
+type URLStorage struct {
+	//URLs map[string]string
+	URLs map[string]map[string]string
+}
+
 func (s *URLStorage) PutURL(uid, shortLink, urlForCuts string) error {
 	if _, ok := s.URLs[uid]; !ok {
 		s.URLs[uid] = map[string]string{}
@@ -38,11 +43,6 @@ func (s *URLStorage) GetUserURLs(uid string) (map[string]string, error) {
 	} else {
 		return s.URLs[uid], nil
 	}
-}
-
-type URLStorage struct {
-	//URLs map[string]string
-	URLs map[string]map[string]string
 }
 
 // NewURLStore returns a new/empty URLStorage

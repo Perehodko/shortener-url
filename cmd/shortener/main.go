@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/Perehodko/shortener-url/internal/DBStorage"
 	"github.com/Perehodko/shortener-url/internal/middlewares"
 	"github.com/Perehodko/shortener-url/internal/storage"
 	"github.com/Perehodko/shortener-url/internal/utils"
@@ -201,9 +202,11 @@ func PingDBPostgres(DBAddress string) func(w http.ResponseWriter, r *http.Reques
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
+		// check db
 		if db.Ping() != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
+
 		defer db.Close()
 		w.WriteHeader(http.StatusOK)
 	}
@@ -245,10 +248,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fileStorage, err := NewStorage(cfg.FileName)
-	if err != nil {
-		log.Fatal(err)
+	var s storage.Storage
+	if cfg.dbAddress != "" {
+		log.Println("SQL is using")
+		s = DBStorage.NewDBStorage(cfg.dbAddress)
+	} else {
+		s, err = NewStorage(cfg.FileName)
 	}
+
+	//fileStorage, err := NewStorage(cfg.FileName)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
 
 	r := chi.NewRouter()
 
@@ -270,11 +281,11 @@ func main() {
 		middleware.Compress(5),
 		middlewares.Decompress)
 
-	r.Post("/", getURLForCut(fileStorage, UUIDStr))
-	r.Get("/{id}", redirectTo(fileStorage, UUIDStr))
+	r.Post("/", getURLForCut(s, UUIDStr))
+	r.Get("/{id}", redirectTo(s, UUIDStr))
 	r.Get("/", notFoundFunc)
-	r.Post("/api/shorten", shorten(fileStorage, UUIDStr))
-	r.Get("/api/user/urls", getUserURLs(fileStorage, UUIDStr))
+	r.Post("/api/shorten", shorten(s, UUIDStr))
+	r.Get("/api/user/urls", getUserURLs(s, UUIDStr))
 	r.Get("/ping", PingDBPostgres(DBAddress))
 
 	log.Fatal(http.ListenAndServe(ServerAddr, r))
