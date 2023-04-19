@@ -3,7 +3,6 @@ package DBStorage
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"log"
 )
 
@@ -16,9 +15,9 @@ func NewDBStorage(DBAddress string) *DBStorage {
 	var err error
 	s.db, err = sql.Open("postgres", DBAddress)
 	if err != nil {
-		fmt.Errorf("cant't open database: %w", err)
+		//fmt.Errorf("cant't open database: %w", err)
+		panic(err)
 	}
-	//defer s.db.Close()
 
 	_, err = s.db.Exec(`
         CREATE TABLE IF NOT EXISTS users_info (
@@ -29,7 +28,8 @@ func NewDBStorage(DBAddress string) *DBStorage {
         )
     `)
 	if err != nil {
-		fmt.Errorf("cant't create table: %w", err)
+		//fmt.Errorf("cant't create table: %w", err)
+		panic(err)
 	}
 	return &s
 }
@@ -45,9 +45,10 @@ func (s *DBStorage) PutURL(uid, shortLink, urlForCuts string) error {
 }
 
 func (s *DBStorage) GetURL(uid, shortLink string) (string, error) {
-	rows, err := s.db.Query(
+	rows, _ := s.db.Query(
 		"SELECT uid, original_url FROM users_info WHERE uid=$1 and short_link=$2",
 		uid, shortLink)
+	err := rows.Err()
 
 	if err != nil {
 		return "", err
@@ -56,25 +57,26 @@ func (s *DBStorage) GetURL(uid, shortLink string) (string, error) {
 
 	var (
 		UID         string
-		originalUrl string
+		originalURL string
 	)
 	for rows.Next() {
-		if err := rows.Scan(&UID, &originalUrl); err != nil {
+		if err := rows.Scan(&UID, &originalURL); err != nil {
 			log.Fatal(err)
 		}
 	}
-	fmt.Println("!!!!!originalUrl:", originalUrl)
-	if len(originalUrl) == 0 {
+	if len(originalURL) == 0 {
 		return "", errors.New("in DB no shortURL from request")
 	} else {
-		return originalUrl, nil
+		return originalURL, nil
 	}
 }
 
 func (s *DBStorage) GetUserURLs(uid string) (map[string]string, error) {
-	rows, err := s.db.Query(
+	rows, _ := s.db.Query(
 		"SELECT short_link, original_url FROM users_info WHERE uid=$1",
 		uid)
+	err := rows.Err()
+
 	if err != nil {
 		return map[string]string{}, errors.New("in map no shortURL from request")
 	}
