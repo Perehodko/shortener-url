@@ -93,7 +93,3 @@ func (s *DBStorage) GetUserURLs(uid string) (map[string]string, error) {
 	}
 	return m, nil
 }
-
-func (s DBStorage) Close() {
-	s.db.Close()
-}
