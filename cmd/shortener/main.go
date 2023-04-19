@@ -248,11 +248,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	fmt.Println("dbAddress!!!!!", dbAddress)
 	var s storage.Storage
 	if cfg.dbAddress != "" {
 		log.Println("SQL is using")
-		s = DBStorage.NewDBStorage(cfg.dbAddress)
+		s = DBStorage.NewDBStorage(*dbAddress)
 	} else {
 		s, err = NewStorage(cfg.FileName)
 	}
