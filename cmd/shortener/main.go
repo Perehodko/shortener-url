@@ -219,9 +219,9 @@ type URLStructBatch struct {
 	OriginalURL   string `json:"original_url"`
 }
 
-type URLStructBatchRes struct {
+type URLStructBatchResponse struct {
 	CorrelationId string `json:"correlation_id"`
-	OriginalURL   string `json:"original_url"`
+	ShortURL      string `json:"short_url"`
 }
 
 func batch(s storage.Storage, DBAddress, UUID string) func(w http.ResponseWriter, r *http.Request) {
@@ -238,7 +238,7 @@ func batch(s storage.Storage, DBAddress, UUID string) func(w http.ResponseWriter
 
 		var u URLStructBatch
 		//buffer size
-		size := 1
+		size := 50
 		store := make(map[string]string)
 
 		// read open bracket
@@ -265,13 +265,20 @@ func batch(s storage.Storage, DBAddress, UUID string) func(w http.ResponseWriter
 			}
 			err = s.PutURLsBatch(ctx, uid, store) // вот тут сбросить оставшиеся данные в БД
 		}
-
 		// read closing bracket
 		decoder.Token()
 
+		tx := URLStructBatchResponse{CorrelationId: "1", ShortURL: "ldld"}
+		// преобразуем tx в JSON-формат
+		txBz, err := json.Marshal(tx)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+
 		workwithcookie.SetUUIDCookie(w, uid)
-		w.WriteHeader(http.StatusOK)
-		//w.Write(txBz)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		w.Write(txBz)
 
 	}
 }
