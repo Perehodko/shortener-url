@@ -288,16 +288,16 @@ func batch(s storage.Storage, DBAddress, UUID string) func(w http.ResponseWriter
 }
 
 func main() {
-	const (
-		host     = "localhost"
-		port     = 5432
-		user     = "postgres"
-		password = "password"
-		dbname   = "postgres"
-		sslmode  = "disable"
-	)
-
-	PSQLConn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s", host, port, user, password, dbname, sslmode)
+	//const (
+	//	host     = "localhost"
+	//	port     = 5432
+	//	user     = "postgres"
+	//	password = "password"
+	//	dbname   = "postgres"
+	//	sslmode  = "disable"
+	//)
+	//
+	//PSQLConn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s", host, port, user, password, dbname, sslmode)
 
 	// получаем UUID
 	UUID := uuid.New()
@@ -306,7 +306,7 @@ func main() {
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
 	fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
-	dbAddress := flag.String("d", PSQLConn, "DATABASE_DSN")
+	dbAddress := flag.String("d", "", "DATABASE_DSN")
 	flag.Parse()
 
 	// вставляем в структуру cfg значения из флагов
