@@ -258,7 +258,7 @@ func batch(s storage.Storage, DBAddress, UUID string) func(w http.ResponseWriter
 
 			if len(store) == size {
 				err = s.PutURLsBatch(ctx, uid, store)
-				//reset
+				//clear map
 				store = make(map[string]string)
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusBadRequest)
@@ -293,7 +293,7 @@ func batch(s storage.Storage, DBAddress, UUID string) func(w http.ResponseWriter
 
 		workwithcookie.SetUUIDCookie(w, uid)
 		w.Header().Set("Content-Type", "application/json")
-		//w.WriteHeader(http.StatusCreated)
+		w.WriteHeader(http.StatusCreated)
 		w.Write(txBz)
 
 	}
