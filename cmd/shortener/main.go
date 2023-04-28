@@ -254,7 +254,7 @@ func batch(s storage.Storage, DBAddress, UUID string) func(w http.ResponseWriter
 				log.Fatal(err)
 			}
 			store[u.CorrelationId] = u.OriginalURL
-			fmt.Printf("%v: %v\n", u.OriginalURL, u.CorrelationId)
+			fmt.Printf("%v: %v\n", u.CorrelationId, u.CorrelationId)
 
 			if len(store) == size {
 				err = s.PutURLsBatch(ctx, uid, store)
@@ -270,8 +270,20 @@ func batch(s storage.Storage, DBAddress, UUID string) func(w http.ResponseWriter
 		// read closing bracket
 		decoder.Token()
 
+		var resp News
+
+		for correlationId, _ := range store {
+			shortLink := utils.GenerateRandomString()
+			shortURL := cfg.BaseURL + "/" + shortLink
+			resp = append(resp, URLStructBatchResponse{
+				CorrelationId: correlationId,
+				ShortURL:      shortURL,
+			})
+		}
+		fmt.Println("resp!!!!", resp)
+
 		//tx := URLStructBatchResponse{CorrelationId: "1", ShortURL: "ldld"}
-		tx := News{URLStructBatchResponse{CorrelationId: "1", ShortURL: "ldld"}}
+		tx := resp
 		// преобразуем tx в JSON-формат
 		txBz, err := json.Marshal(tx)
 		//txBz, err := json.Marshal(map[string]interface{}{"correlation_id": "1", "short_url": "ldld"})

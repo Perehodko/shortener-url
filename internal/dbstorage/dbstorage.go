@@ -118,9 +118,10 @@ func (s *dbstorage) PutURLsBatch(ctx context.Context, uid string, store map[stri
 
 	fmt.Println("bdStore - store", store)
 
-	for CorrelationId, OriginalURL := range store {
+	for shortLink, OriginalURL := range store {
+		//shortLink := utils.GenerateRandomString()
 		// шаг 3 — указываем, что каждая запись будет добавлена в транзакцию
-		if _, err = stmt.ExecContext(ctx, uid, CorrelationId, OriginalURL); err != nil {
+		if _, err = stmt.ExecContext(ctx, uid, shortLink, OriginalURL); err != nil {
 			return err
 		}
 	}
