@@ -1,8 +1,10 @@
 package dbstorage
 
 import (
+	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 )
 
@@ -94,4 +96,35 @@ func (s *dbstorage) GetUserURLs(uid string) (map[string]string, error) {
 		m[shortLink] = originalURL
 	}
 	return m, nil
+}
+
+func (s *dbstorage) PutURLsBatch(ctx context.Context, uid string, store map[string]string) error {
+	// шаг 1 — объявляем транзакцию
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	// шаг 1.1 — если возникает ошибка, откатываем изменения
+	defer tx.Rollback()
+
+	// шаг 2 — готовим инструкцию
+	//stmt, err := tx.PrepareContext(ctx, "INSERT INTO  users_info (uid, short_link, original_url) VALUES(?,?,?)")
+	stmt, err := tx.PrepareContext(ctx, "INSERT INTO users_info (uid, short_link, original_url) VALUES ($1, $2, $3)")
+	if err != nil {
+		return err
+	}
+	// шаг 2.1 — не забываем закрыть инструкцию, когда она больше не нужна
+	defer stmt.Close()
+
+	fmt.Println("bdStore - store", store)
+
+	for CorrelationId, OriginalURL := range store {
+		// шаг 3 — указываем, что каждая запись будет добавлена в транзакцию
+		if _, err = stmt.ExecContext(ctx, uid, CorrelationId, OriginalURL); err != nil {
+			return err
+		}
+	}
+
+	// шаг 4 — сохраняем изменения
+	return tx.Commit()
 }

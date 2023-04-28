@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"github.com/Perehodko/shortener-url/internal/dbstorage"
 	"github.com/Perehodko/shortener-url/internal/middlewares"
 	"github.com/Perehodko/shortener-url/internal/storage"
@@ -18,6 +20,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 )
 
 type Config struct {
@@ -211,7 +214,80 @@ func PingDBPostgres(DBAddress string) func(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+type URLStructBatch struct {
+	CorrelationId string `json:"correlation_id"`
+	OriginalURL   string `json:"original_url"`
+}
+
+type URLStructBatchRes struct {
+	CorrelationId string `json:"correlation_id"`
+	OriginalURL   string `json:"original_url"`
+}
+
+func batch(s storage.Storage, DBAddress, UUID string) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+		defer cancel()
+
+		uid, err := workwithcookie.ExtractUID(r.Cookies())
+		if err != nil {
+			uid = UUID
+		}
+		// получить данные из тела запроса
+		decoder := json.NewDecoder(r.Body)
+
+		var u URLStructBatch
+		//buffer size
+		size := 1
+		store := make(map[string]string)
+
+		// read open bracket
+		decoder.Token()
+
+		// while the array contains values
+		for decoder.More() {
+			// decode an array value (Message)
+			err := decoder.Decode(&u)
+			if err != nil {
+				log.Fatal(err)
+			}
+			store[u.CorrelationId] = u.OriginalURL
+			fmt.Printf("%v: %v\n", u.OriginalURL, u.CorrelationId)
+
+			if len(store) == size {
+				err = s.PutURLsBatch(ctx, uid, store)
+				//reset
+				store = make(map[string]string)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusBadRequest)
+					return
+				}
+			}
+			err = s.PutURLsBatch(ctx, uid, store) // вот тут сбросить оставшиеся данные в БД
+		}
+
+		// read closing bracket
+		decoder.Token()
+
+		workwithcookie.SetUUIDCookie(w, uid)
+		w.WriteHeader(http.StatusOK)
+		//w.Write(txBz)
+
+	}
+}
+
 func main() {
+	//const (
+	//	host     = "localhost"
+	//	port     = 5432
+	//	user     = "postgres"
+	//	password = "password"
+	//	dbname   = "postgres"
+	//	sslmode  = "disable"
+	//)
+	//
+	//PSQLConn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s", host, port, user, password, dbname, sslmode)
+
 	// получаем UUID
 	UUID := uuid.New()
 	UUIDStr := UUID.String()
@@ -271,6 +347,7 @@ func main() {
 	r.Post("/api/shorten", shorten(s, UUIDStr))
 	r.Get("/api/user/urls", getUserURLs(s, UUIDStr))
 	r.Get("/ping", PingDBPostgres(DBAddress))
+	r.Post("/api/shorten/batch", batch(s, DBAddress, UUIDStr))
 
 	log.Fatal(http.ListenAndServe(ServerAddr, r))
 }

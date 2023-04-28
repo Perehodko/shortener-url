@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +13,7 @@ type Storage interface {
 	PutURL(uid, shortLink, urlForCuts string) error
 	GetURL(uid, shortURL string) (string, error)
 	GetUserURLs(uid string) (map[string]string, error)
+	PutURLsBatch(ctx context.Context, uid string, store map[string]string) error
 }
 
 type URLStorage struct {
@@ -45,6 +47,16 @@ func (s *URLStorage) GetUserURLs(uid string) (map[string]string, error) {
 	}
 }
 
+func (s *URLStorage) PutURLsBatch(ctx context.Context, uid string, store map[string]string) error {
+	if _, ok := s.URLs[uid]; !ok {
+		s.URLs[uid] = map[string]string{}
+	}
+	for CorrelationId, OriginalURL := range store {
+		s.URLs[uid][CorrelationId] = OriginalURL
+	}
+	return nil
+}
+
 // NewURLStore returns a new/empty URLStorage
 func NewURLStore() *URLStorage {
 	return &URLStorage{
@@ -73,6 +85,31 @@ func (fs *FileStorage) GetURL(uid, key string) (value string, err error) {
 func (fs *FileStorage) PutURL(uid, key, value string) (err error) {
 	if err = fs.ms.PutURL(uid, key, value); err != nil {
 		return fmt.Errorf("unable to add new key in memorystorage: %w", err)
+	}
+
+	// перезаписываем файл с нуля
+	err = fs.f.Truncate(0)
+	if err != nil {
+		return fmt.Errorf("unable to truncate file: %w", err)
+	}
+	_, err = fs.f.Seek(0, 0)
+	if err != nil {
+		return fmt.Errorf("unable to get the beginning of file: %w", err)
+	}
+
+	err = json.NewEncoder(fs.f).Encode(&fs.ms.URLs)
+	if err != nil {
+		return fmt.Errorf("unable to encode data into the file: %w", err)
+	}
+	return nil
+}
+
+func (fs *FileStorage) PutURLsBatch(ctx context.Context, uid string, store map[string]string) (err error) {
+	//if err = fs.ms.PutURL(uid, key, value); err != nil {
+	//	return fmt.Errorf("unable to add new key in memorystorage: %w", err)
+	//}
+	for CorrelationId, OriginalURL := range store {
+		fs.ms.URLs[uid][CorrelationId] = OriginalURL
 	}
 
 	// перезаписываем файл с нуля
