@@ -13,7 +13,8 @@ type Storage interface {
 	PutURL(uid, shortLink, urlForCuts string) error
 	GetURL(uid, shortURL string) (string, error)
 	GetUserURLs(uid string) (map[string]string, error)
-	PutURLsBatch(ctx context.Context, uid string, store map[string]string) error
+	//PutURLsBatch(ctx context.Context, uid string, store map[string]string) error
+	//GetURLByCorrelationId(CorrelationId string) (string, error)
 }
 
 type URLStorage struct {
@@ -57,6 +58,10 @@ func (s *URLStorage) PutURLsBatch(ctx context.Context, uid string, store map[str
 	return nil
 }
 
+//func GetURLByCorrelationId(CorrelationId string) (string, error) {
+//
+//}
+
 // NewURLStore returns a new/empty URLStorage
 func NewURLStore() *URLStorage {
 	return &URLStorage{
@@ -68,7 +73,7 @@ func NewMemStorage() *URLStorage { //  возвращаем интерфейс
 	return &URLStorage{URLs: make(map[string]map[string]string)}
 }
 
-// file
+// file storage
 type FileStorage struct {
 	ms *URLStorage // сделаем внутреннюю хранилку в памяти тоже интерфейсом, на случай если захотим ее замокать
 	f  *os.File

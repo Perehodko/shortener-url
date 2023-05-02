@@ -1,10 +1,8 @@
 package dbstorage
 
 import (
-	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"log"
 )
 
@@ -98,34 +96,58 @@ func (s *dbstorage) GetUserURLs(uid string) (map[string]string, error) {
 	return m, nil
 }
 
-func (s *dbstorage) PutURLsBatch(ctx context.Context, uid string, store map[string]string) error {
-	// шаг 1 — объявляем транзакцию
-	tx, err := s.db.Begin()
-	if err != nil {
-		return err
-	}
-	// шаг 1.1 — если возникает ошибка, откатываем изменения
-	defer tx.Rollback()
+//func (s *dbstorage) PutURLsBatch(ctx context.Context, uid string, store map[string]string) error {
+//	// шаг 1 — объявляем транзакцию
+//	tx, err := s.db.Begin()
+//	if err != nil {
+//		return err
+//	}
+//	// шаг 1.1 — если возникает ошибка, откатываем изменения
+//	defer tx.Rollback()
+//
+//	// шаг 2 — готовим инструкцию
+//	//stmt, err := tx.PrepareContext(ctx, "INSERT INTO  users_info (uid, short_link, original_url) VALUES(?,?,?)")
+//	stmt, err := tx.PrepareContext(ctx, "INSERT INTO users_info (uid, short_link, original_url, link_id) VALUES ($1, $2, $3, $4)")
+//	if err != nil {
+//		return err
+//	}
+//	// шаг 2.1 — не забываем закрыть инструкцию, когда она больше не нужна
+//	defer stmt.Close()
+//
+//	fmt.Println("bdStore - store", store)
+//
+//	for CorrelationId, OriginalURL := range store {
+//		shortLink := utils.GenerateRandomString()
+//		// шаг 3 — указываем, что каждая запись будет добавлена в транзакцию
+//		if _, err = stmt.ExecContext(ctx, uid, shortLink, OriginalURL, CorrelationId); err != nil {
+//			return err
+//		}
+//	}
+//
+//	// шаг 4 — сохраняем изменения
+//	return tx.Commit()
+//}
 
-	// шаг 2 — готовим инструкцию
-	//stmt, err := tx.PrepareContext(ctx, "INSERT INTO  users_info (uid, short_link, original_url) VALUES(?,?,?)")
-	stmt, err := tx.PrepareContext(ctx, "INSERT INTO users_info (uid, short_link, original_url) VALUES ($1, $2, $3)")
-	if err != nil {
-		return err
-	}
-	// шаг 2.1 — не забываем закрыть инструкцию, когда она больше не нужна
-	defer stmt.Close()
-
-	fmt.Println("bdStore - store", store)
-
-	for shortLink, OriginalURL := range store {
-		//shortLink := utils.GenerateRandomString()
-		// шаг 3 — указываем, что каждая запись будет добавлена в транзакцию
-		if _, err = stmt.ExecContext(ctx, uid, shortLink, OriginalURL); err != nil {
-			return err
-		}
-	}
-
-	// шаг 4 — сохраняем изменения
-	return tx.Commit()
-}
+//func (s *dbstorage) GetURLByCorrelationId(CorrelationId string) (string, error) {
+//	rows, _ := s.db.Query(
+//		"SELECT short_link FROM users_info WHERE uid=$1", CorrelationId)
+//	err := rows.Err()
+//
+//	if err != nil {
+//		return "", err
+//	}
+//	defer rows.Close()
+//
+//	var shortURL string
+//
+//	for rows.Next() {
+//		if err := rows.Scan(&shortURL); err != nil {
+//			log.Fatal(err)
+//		}
+//	}
+//	if len(shortURL) == 0 {
+//		return "", errors.New("in DB no shortURL from request")
+//	} else {
+//		return shortURL, nil
+//	}
+//}

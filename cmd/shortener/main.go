@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"flag"
@@ -20,7 +19,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"time"
 )
 
 type Config struct {
@@ -228,8 +226,8 @@ type News []URLStructBatchResponse
 
 func batch(s storage.Storage, DBAddress, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-		defer cancel()
+		//ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+		//defer cancel()
 
 		uid, err := workwithcookie.ExtractUID(r.Cookies())
 		if err != nil {
@@ -240,7 +238,7 @@ func batch(s storage.Storage, DBAddress, UUID string) func(w http.ResponseWriter
 
 		var u URLStructBatch
 		//buffer size
-		size := 50
+		//size := 50
 		store := make(map[string]string)
 
 		// read open bracket
@@ -255,17 +253,18 @@ func batch(s storage.Storage, DBAddress, UUID string) func(w http.ResponseWriter
 			}
 			store[u.CorrelationId] = u.OriginalURL
 			fmt.Printf("%v: %v\n", u.CorrelationId, u.CorrelationId)
+			fmt.Println("store:", store)
 
-			if len(store) == size {
-				err = s.PutURLsBatch(ctx, uid, store)
-				//clear map
-				store = make(map[string]string)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusBadRequest)
-					return
-				}
-			}
-			err = s.PutURLsBatch(ctx, uid, store) // вот тут сбросить оставшиеся данные в БД
+			//if len(store) == size {
+			//	err = s.PutURLsBatch(ctx, uid, store)
+			//	//clear map
+			//	store = make(map[string]string)
+			//	if err != nil {
+			//		http.Error(w, err.Error(), http.StatusBadRequest)
+			//		return
+			//	}
+			//}
+			//err = s.PutURLsBatch(ctx, uid, store) // вот тут сбросить оставшиеся данные в БД
 		}
 		// read closing bracket
 		decoder.Token()
@@ -273,16 +272,16 @@ func batch(s storage.Storage, DBAddress, UUID string) func(w http.ResponseWriter
 		var resp News
 
 		for correlationId, _ := range store {
+			//shortURL, err := s.GetURLByCorrelationId(correlationId)
 			shortLink := utils.GenerateRandomString()
-			shortURL := cfg.BaseURL + "/" + shortLink
+
 			resp = append(resp, URLStructBatchResponse{
 				CorrelationId: correlationId,
-				ShortURL:      shortURL,
+				ShortURL:      cfg.BaseURL + "/" + shortLink,
 			})
 		}
 		fmt.Println("resp!!!!", resp)
 
-		//tx := URLStructBatchResponse{CorrelationId: "1", ShortURL: "ldld"}
 		tx := resp
 		// преобразуем tx в JSON-формат
 		txBz, err := json.Marshal(tx)
@@ -300,16 +299,16 @@ func batch(s storage.Storage, DBAddress, UUID string) func(w http.ResponseWriter
 }
 
 func main() {
-	//const (
-	//	host     = "localhost"
-	//	port     = 5432
-	//	user     = "postgres"
-	//	password = "password"
-	//	dbname   = "postgres"
-	//	sslmode  = "disable"
-	//)
-	//
-	//PSQLConn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s", host, port, user, password, dbname, sslmode)
+	const (
+		host     = "localhost"
+		port     = 5432
+		user     = "postgres"
+		password = "password"
+		dbname   = "postgres"
+		sslmode  = "disable"
+	)
+
+	PSQLConn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s", host, port, user, password, dbname, sslmode)
 
 	// получаем UUID
 	UUID := uuid.New()
@@ -318,7 +317,7 @@ func main() {
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
 	fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
-	dbAddress := flag.String("d", "", "DATABASE_DSN")
+	dbAddress := flag.String("d", PSQLConn, "DATABASE_DSN")
 	flag.Parse()
 
 	// вставляем в структуру cfg значения из флагов
