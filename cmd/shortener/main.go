@@ -226,7 +226,7 @@ type URLStructBatchResponse struct {
 
 type News []URLStructBatchResponse
 
-func batch(s storage.Storage, DBAddress, UUID string) func(w http.ResponseWriter, r *http.Request) {
+func batch(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 		defer cancel()
@@ -241,7 +241,6 @@ func batch(s storage.Storage, DBAddress, UUID string) func(w http.ResponseWriter
 		var u URLStructBatch
 		//buffer size
 		size := 50
-		//store := make(map[string]string)
 		store := make(map[string][]string)
 
 		// read open bracket
@@ -256,11 +255,7 @@ func batch(s storage.Storage, DBAddress, UUID string) func(w http.ResponseWriter
 			}
 			shortLink := utils.GenerateRandomString()
 
-			store[u.CorrelationId] = append(store[u.CorrelationId], shortLink)
-			store[u.CorrelationId] = append(store[u.CorrelationId], u.OriginalURL)
-
-			fmt.Printf("%v: %v\n", u.CorrelationId, u.CorrelationId)
-			fmt.Println("store:", store)
+			store[u.CorrelationId] = append(store[u.CorrelationId], shortLink, u.OriginalURL)
 
 			if len(store) == size {
 				err = s.PutURLsBatch(ctx, uid, store)
@@ -279,20 +274,15 @@ func batch(s storage.Storage, DBAddress, UUID string) func(w http.ResponseWriter
 		var resp News
 
 		for correlationId, value := range store {
-			//shortURL, err := s.GetURLByCorrelationId(correlationId)
-			//shortLink := utils.GenerateRandomString()
-
 			resp = append(resp, URLStructBatchResponse{
 				CorrelationId: correlationId,
 				ShortURL:      cfg.BaseURL + "/" + value[0],
 			})
 		}
-		fmt.Println("resp!!!!", resp)
 
 		tx := resp
 		// преобразуем tx в JSON-формат
 		txBz, err := json.Marshal(tx)
-		//txBz, err := json.Marshal(map[string]interface{}{"correlation_id": "1", "short_url": "ldld"})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
@@ -315,7 +305,7 @@ func main() {
 		sslmode  = "disable"
 	)
 
-	//PSQLConn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s", host, port, user, password, dbname, sslmode)
+	PSQLConn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s", host, port, user, password, dbname, sslmode)
 
 	// получаем UUID
 	UUID := uuid.New()
@@ -324,7 +314,7 @@ func main() {
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
 	fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
-	dbAddress := flag.String("d", "", "DATABASE_DSN")
+	dbAddress := flag.String("d", PSQLConn, "DATABASE_DSN")
 	flag.Parse()
 
 	// вставляем в структуру cfg значения из флагов
@@ -376,7 +366,7 @@ func main() {
 	r.Post("/api/shorten", shorten(s, UUIDStr))
 	r.Get("/api/user/urls", getUserURLs(s, UUIDStr))
 	r.Get("/ping", PingDBPostgres(DBAddress))
-	r.Post("/api/shorten/batch", batch(s, DBAddress, UUIDStr))
+	r.Post("/api/shorten/batch", batch(s, UUIDStr))
 
 	log.Fatal(http.ListenAndServe(ServerAddr, r))
 }
