@@ -214,12 +214,12 @@ func PingDBPostgres(DBAddress string) func(w http.ResponseWriter, r *http.Reques
 }
 
 type URLStructBatch struct {
-	CorrelationId string `json:"correlation_id"`
+	correlationID string `json:"correlation_id"`
 	OriginalURL   string `json:"original_url"`
 }
 
 type URLStructBatchResponse struct {
-	CorrelationId string `json:"correlation_id"`
+	correlationID string `json:"correlation_id"`
 	ShortURL      string `json:"short_url"`
 }
 
@@ -254,7 +254,7 @@ func batch(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.R
 			}
 			shortLink := utils.GenerateRandomString()
 
-			store[u.CorrelationId] = append(store[u.CorrelationId], shortLink, u.OriginalURL)
+			store[u.correlationID] = append(store[u.correlationID], shortLink, u.OriginalURL)
 
 			if len(store) == size {
 				err = s.PutURLsBatch(ctx, uid, store)
@@ -265,16 +265,21 @@ func batch(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.R
 					return
 				}
 			}
-			err = s.PutURLsBatch(ctx, uid, store) // вот тут сбросить оставшиеся данные в БД
+			// сбрасываем оставшиеся данные в хранилище
+			err = s.PutURLsBatch(ctx, uid, store)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
 		}
 		// read closing bracket
 		decoder.Token()
 
 		var resp News
 
-		for correlationId, value := range store {
+		for correlationID, value := range store {
 			resp = append(resp, URLStructBatchResponse{
-				CorrelationId: correlationId,
+				correlationID: correlationID,
 				ShortURL:      cfg.BaseURL + "/" + value[0],
 			})
 		}

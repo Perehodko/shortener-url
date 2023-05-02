@@ -47,19 +47,15 @@ func (s *URLStorage) GetUserURLs(uid string) (map[string]string, error) {
 	}
 }
 
-func (s *URLStorage) PutURLsBatch(ctx context.Context, uid string, store map[string][]string) error {
+func (s *URLStorage) PutURLsBatch(_ context.Context, uid string, store map[string][]string) error {
 	if _, ok := s.URLs[uid]; !ok {
 		s.URLs[uid] = map[string]string{}
 	}
-	for CorrelationId, OriginalURL := range store {
-		s.URLs[uid][CorrelationId] = OriginalURL[1]
+	for CorrelationID, OriginalURL := range store {
+		s.URLs[uid][CorrelationID] = OriginalURL[1]
 	}
 	return nil
 }
-
-//func GetURLByCorrelationId(CorrelationId string) (string, error) {
-//
-//}
 
 // NewURLStore returns a new/empty URLStorage
 func NewURLStore() *URLStorage {
@@ -108,9 +104,9 @@ func (fs *FileStorage) PutURL(uid, key, value string) (err error) {
 	return nil
 }
 
-func (fs *FileStorage) PutURLsBatch(ctx context.Context, uid string, store map[string][]string) (err error) {
-	for CorrelationId, OriginalURL := range store {
-		fs.ms.URLs[uid][CorrelationId] = OriginalURL[1]
+func (fs *FileStorage) PutURLsBatch(_ context.Context, uid string, store map[string][]string) (err error) {
+	for CorrelationID, OriginalURL := range store {
+		fs.ms.URLs[uid][CorrelationID] = OriginalURL[1]
 	}
 
 	// перезаписываем файл с нуля
