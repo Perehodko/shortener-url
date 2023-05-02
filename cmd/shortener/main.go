@@ -214,12 +214,12 @@ func PingDBPostgres(DBAddress string) func(w http.ResponseWriter, r *http.Reques
 }
 
 type URLStructBatch struct {
-	correlationID string `json:"correlation_id"`
+	CorrelationID string `json:"correlation_id"`
 	OriginalURL   string `json:"original_url"`
 }
 
 type URLStructBatchResponse struct {
-	correlationID string `json:"correlation_id"`
+	CorrelationID string `json:"correlation_id"`
 	ShortURL      string `json:"short_url"`
 }
 
@@ -254,7 +254,7 @@ func batch(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.R
 			}
 			shortLink := utils.GenerateRandomString()
 
-			store[u.correlationID] = append(store[u.correlationID], shortLink, u.OriginalURL)
+			store[u.CorrelationID] = append(store[u.CorrelationID], shortLink, u.OriginalURL)
 
 			if len(store) == size {
 				err = s.PutURLsBatch(ctx, uid, store)
@@ -279,7 +279,7 @@ func batch(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.R
 
 		for correlationID, value := range store {
 			resp = append(resp, URLStructBatchResponse{
-				correlationID: correlationID,
+				CorrelationID: correlationID,
 				ShortURL:      cfg.BaseURL + "/" + value[0],
 			})
 		}
