@@ -295,17 +295,6 @@ func batch(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.R
 }
 
 func main() {
-	const (
-		host     = "localhost"
-		port     = 5432
-		user     = "postgres"
-		password = "password"
-		dbname   = "postgres"
-		sslmode  = "disable"
-	)
-
-	//PSQLConn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s", host, port, user, password, dbname, sslmode)
-
 	// получаем UUID
 	UUID := uuid.New()
 	UUIDStr := UUID.String()

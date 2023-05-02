@@ -14,7 +14,6 @@ type Storage interface {
 	GetURL(uid, shortURL string) (string, error)
 	GetUserURLs(uid string) (map[string]string, error)
 	PutURLsBatch(ctx context.Context, uid string, store map[string][]string) error
-	//GetURLByCorrelationId(CorrelationId string) (string, error)
 }
 
 type URLStorage struct {
@@ -110,9 +109,6 @@ func (fs *FileStorage) PutURL(uid, key, value string) (err error) {
 }
 
 func (fs *FileStorage) PutURLsBatch(ctx context.Context, uid string, store map[string][]string) (err error) {
-	//if err = fs.ms.PutURL(uid, key, value); err != nil {
-	//	return fmt.Errorf("unable to add new key in memorystorage: %w", err)
-	//}
 	for CorrelationId, OriginalURL := range store {
 		fs.ms.URLs[uid][CorrelationId] = OriginalURL[1]
 	}
