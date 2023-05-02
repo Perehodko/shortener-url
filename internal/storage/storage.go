@@ -13,7 +13,7 @@ type Storage interface {
 	PutURL(uid, shortLink, urlForCuts string) error
 	GetURL(uid, shortURL string) (string, error)
 	GetUserURLs(uid string) (map[string]string, error)
-	//PutURLsBatch(ctx context.Context, uid string, store map[string]string) error
+	PutURLsBatch(ctx context.Context, uid string, store map[string][]string) error
 	//GetURLByCorrelationId(CorrelationId string) (string, error)
 }
 
@@ -48,12 +48,12 @@ func (s *URLStorage) GetUserURLs(uid string) (map[string]string, error) {
 	}
 }
 
-func (s *URLStorage) PutURLsBatch(ctx context.Context, uid string, store map[string]string) error {
+func (s *URLStorage) PutURLsBatch(ctx context.Context, uid string, store map[string][]string) error {
 	if _, ok := s.URLs[uid]; !ok {
 		s.URLs[uid] = map[string]string{}
 	}
 	for CorrelationId, OriginalURL := range store {
-		s.URLs[uid][CorrelationId] = OriginalURL
+		s.URLs[uid][CorrelationId] = OriginalURL[1]
 	}
 	return nil
 }
@@ -109,12 +109,12 @@ func (fs *FileStorage) PutURL(uid, key, value string) (err error) {
 	return nil
 }
 
-func (fs *FileStorage) PutURLsBatch(ctx context.Context, uid string, store map[string]string) (err error) {
+func (fs *FileStorage) PutURLsBatch(ctx context.Context, uid string, store map[string][]string) (err error) {
 	//if err = fs.ms.PutURL(uid, key, value); err != nil {
 	//	return fmt.Errorf("unable to add new key in memorystorage: %w", err)
 	//}
 	for CorrelationId, OriginalURL := range store {
-		fs.ms.URLs[uid][CorrelationId] = OriginalURL
+		fs.ms.URLs[uid][CorrelationId] = OriginalURL[1]
 	}
 
 	// перезаписываем файл с нуля

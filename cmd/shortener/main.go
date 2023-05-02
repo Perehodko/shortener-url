@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"flag"
@@ -19,6 +20,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 )
 
 type Config struct {
@@ -226,8 +228,8 @@ type News []URLStructBatchResponse
 
 func batch(s storage.Storage, DBAddress, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		//ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-		//defer cancel()
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+		defer cancel()
 
 		uid, err := workwithcookie.ExtractUID(r.Cookies())
 		if err != nil {
@@ -238,8 +240,9 @@ func batch(s storage.Storage, DBAddress, UUID string) func(w http.ResponseWriter
 
 		var u URLStructBatch
 		//buffer size
-		//size := 50
-		store := make(map[string]string)
+		size := 50
+		//store := make(map[string]string)
+		store := make(map[string][]string)
 
 		// read open bracket
 		decoder.Token()
@@ -251,33 +254,37 @@ func batch(s storage.Storage, DBAddress, UUID string) func(w http.ResponseWriter
 			if err != nil {
 				log.Fatal(err)
 			}
-			store[u.CorrelationId] = u.OriginalURL
+			shortLink := utils.GenerateRandomString()
+
+			store[u.CorrelationId] = append(store[u.CorrelationId], shortLink)
+			store[u.CorrelationId] = append(store[u.CorrelationId], u.OriginalURL)
+
 			fmt.Printf("%v: %v\n", u.CorrelationId, u.CorrelationId)
 			fmt.Println("store:", store)
 
-			//if len(store) == size {
-			//	err = s.PutURLsBatch(ctx, uid, store)
-			//	//clear map
-			//	store = make(map[string]string)
-			//	if err != nil {
-			//		http.Error(w, err.Error(), http.StatusBadRequest)
-			//		return
-			//	}
-			//}
-			//err = s.PutURLsBatch(ctx, uid, store) // вот тут сбросить оставшиеся данные в БД
+			if len(store) == size {
+				err = s.PutURLsBatch(ctx, uid, store)
+				//clear map
+				store = make(map[string][]string)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusBadRequest)
+					return
+				}
+			}
+			err = s.PutURLsBatch(ctx, uid, store) // вот тут сбросить оставшиеся данные в БД
 		}
 		// read closing bracket
 		decoder.Token()
 
 		var resp News
 
-		for correlationId, _ := range store {
+		for correlationId, value := range store {
 			//shortURL, err := s.GetURLByCorrelationId(correlationId)
-			shortLink := utils.GenerateRandomString()
+			//shortLink := utils.GenerateRandomString()
 
 			resp = append(resp, URLStructBatchResponse{
 				CorrelationId: correlationId,
-				ShortURL:      cfg.BaseURL + "/" + shortLink,
+				ShortURL:      cfg.BaseURL + "/" + value[0],
 			})
 		}
 		fmt.Println("resp!!!!", resp)
