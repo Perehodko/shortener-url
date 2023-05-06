@@ -10,7 +10,7 @@ import (
 )
 
 type Storage interface {
-	PutURL(uid, shortLink, urlForCuts string) error
+	PutURL(uid, shortLink, urlForCuts string) (string, error)
 	GetURL(uid, shortURL string) (string, error)
 	GetUserURLs(uid string) (map[string]string, error)
 	PutURLsBatch(ctx context.Context, uid string, store map[string][]string) error
@@ -21,13 +21,13 @@ type URLStorage struct {
 	URLs map[string]map[string]string
 }
 
-func (s *URLStorage) PutURL(uid, shortLink, urlForCuts string) error {
+func (s *URLStorage) PutURL(uid, shortLink, urlForCuts string) (string, error) {
 	if _, ok := s.URLs[uid]; !ok {
 		s.URLs[uid] = map[string]string{}
 	}
 
 	s.URLs[uid][shortLink] = urlForCuts
-	return nil
+	return "", nil
 }
 
 func (s *URLStorage) GetURL(uid, shortLink string) (string, error) {
@@ -82,26 +82,26 @@ func (fs *FileStorage) GetURL(uid, key string) (value string, err error) {
 	return fs.ms.GetURL(uid, key)
 }
 
-func (fs *FileStorage) PutURL(uid, key, value string) (err error) {
-	if err = fs.ms.PutURL(uid, key, value); err != nil {
-		return fmt.Errorf("unable to add new key in memorystorage: %w", err)
+func (fs *FileStorage) PutURL(uid, key, value string) (string, error) {
+	if _, err := fs.ms.PutURL(uid, key, value); err != nil {
+		return "", fmt.Errorf("unable to add new key in memorystorage: %w", err)
 	}
 
 	// перезаписываем файл с нуля
-	err = fs.f.Truncate(0)
+	err := fs.f.Truncate(0)
 	if err != nil {
-		return fmt.Errorf("unable to truncate file: %w", err)
+		return "", fmt.Errorf("unable to truncate file: %w", err)
 	}
 	_, err = fs.f.Seek(0, 0)
 	if err != nil {
-		return fmt.Errorf("unable to get the beginning of file: %w", err)
+		return "", fmt.Errorf("unable to get the beginning of file: %w", err)
 	}
 
 	err = json.NewEncoder(fs.f).Encode(&fs.ms.URLs)
 	if err != nil {
-		return fmt.Errorf("unable to encode data into the file: %w", err)
+		return "", fmt.Errorf("unable to encode data into the file: %w", err)
 	}
-	return nil
+	return "", nil
 }
 
 func (fs *FileStorage) PutURLsBatch(_ context.Context, uid string, store map[string][]string) (err error) {

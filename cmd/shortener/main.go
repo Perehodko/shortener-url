@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"flag"
+	"fmt"
 	"github.com/Perehodko/shortener-url/internal/dbstorage"
 	"github.com/Perehodko/shortener-url/internal/middlewares"
 	"github.com/Perehodko/shortener-url/internal/storage"
@@ -34,6 +36,9 @@ var cfg Config
 func getURLForCut(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		statusHeader := http.StatusCreated
+
+		var shortLinkFromDB string
 
 		uid, err := workwithcookie.ExtractUID(r.Cookies())
 		if err != nil {
@@ -52,17 +57,22 @@ func getURLForCut(s storage.Storage, UUID string) func(w http.ResponseWriter, r 
 		urlForCuts := string(bodyData)
 
 		shortLink := utils.GenerateRandomString()
-		shortURL := cfg.BaseURL + "/" + shortLink
 
 		//записываем в мапу s.URLs[UUID] = map[shortLink]urlForCuts{}
-		err = s.PutURL(UUID, shortLink, urlForCuts)
+		shortLink, err = s.PutURL(UUID, shortLink, urlForCuts)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
+			var linkExistsErr *dbstorage.LinkExistsError
+			if !errors.As(err, &linkExistsErr) {
+				http.Error(w, "internal server error", http.StatusInternalServerError)
+				return
+			}
+			shortLinkFromDB = linkExistsErr.LinkID
+			statusHeader = http.StatusConflict
 		}
+		shortURL := cfg.BaseURL + "/" + shortLinkFromDB
 
 		workwithcookie.SetUUIDCookie(w, uid)
-		w.WriteHeader(http.StatusCreated)
+		w.WriteHeader(statusHeader)
 		w.Write([]byte(shortURL))
 	}
 }
@@ -105,6 +115,8 @@ type Res struct {
 
 func shorten(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		statusHeader := http.StatusCreated
+		var shortLinkFromDB string
 
 		uid, err := workwithcookie.ExtractUID(r.Cookies())
 		if err != nil {
@@ -123,13 +135,18 @@ func shorten(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http
 		urlForCuts := u.URL
 
 		shortLink := utils.GenerateRandomString()
-		shortURL := cfg.BaseURL + "/" + shortLink
 
-		err = s.PutURL(UUID, shortLink, urlForCuts)
+		shortLink, err = s.PutURL(UUID, shortLink, urlForCuts)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
+			var linkExistsErr *dbstorage.LinkExistsError
+			if !errors.As(err, &linkExistsErr) {
+				http.Error(w, "internal server error", http.StatusInternalServerError)
+				return
+			}
+			shortLinkFromDB = linkExistsErr.LinkID
+			statusHeader = http.StatusConflict
 		}
+		shortURL := cfg.BaseURL + "/" + shortLinkFromDB
 
 		tx := Res{Result: shortURL}
 		// преобразуем tx в JSON-формат
@@ -140,7 +157,7 @@ func shorten(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http
 
 		workwithcookie.SetUUIDCookie(w, uid)
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
+		w.WriteHeader(statusHeader)
 		w.Write(txBz)
 	}
 }
@@ -300,6 +317,16 @@ func batch(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.R
 }
 
 func main() {
+	const (
+		host     = "localhost"
+		port     = 5432
+		user     = "postgres"
+		password = "password"
+		dbname   = "postgres"
+		sslmode  = "disable"
+	)
+
+	PSQLConn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s", host, port, user, password, dbname, sslmode)
 	// получаем UUID
 	UUID := uuid.New()
 	UUIDStr := UUID.String()
@@ -307,7 +334,7 @@ func main() {
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
 	fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
-	dbAddress := flag.String("d", "", "DATABASE_DSN")
+	dbAddress := flag.String("d", PSQLConn, "DATABASE_DSN")
 	flag.Parse()
 
 	// вставляем в структуру cfg значения из флагов
