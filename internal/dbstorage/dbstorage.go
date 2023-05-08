@@ -66,10 +66,10 @@ func (s *dbstorage) PutURL(uid, shortLink, urlForCuts string) (string, error) {
 	ON CONFLICT(original_url) DO UPDATE SET short_link=users_info.short_link
     RETURNING short_link
 	;`, uid, shortLink, urlForCuts).Scan(&linkID)
-	fmt.Println("err!!!!!!!!!!!!", err)
-	fmt.Println("&linkID", &linkID, linkID)
-	fmt.Println("shortLink", shortLink)
-	fmt.Println("urlForCuts", urlForCuts)
+	//fmt.Println("err!!!!!!!!!!!!", err)
+	//fmt.Println("&linkID", &linkID, linkID)
+	//fmt.Println("shortLink", shortLink)
+	//fmt.Println("urlForCuts", urlForCuts)
 	if err != nil {
 		return "", err
 	}

@@ -57,7 +57,7 @@ func getURLForCut(s storage.Storage, UUID string) func(w http.ResponseWriter, r 
 		shortLink := utils.GenerateRandomString()
 		//записываем в мапу s.URLs[UUID] = map[shortLink]urlForCuts{}
 		shortLinkFromStore, err := s.PutURL(UUID, shortLink, urlForCuts)
-		fmt.Println("shortLinkFromStore", shortLinkFromStore)
+		//fmt.Println("shortLinkFromStore", shortLinkFromStore)
 		if shortLinkFromStore == "" {
 			shortLinkFromStore = shortLink
 		}
@@ -277,18 +277,21 @@ func batch(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.R
 			shortLink := utils.GenerateRandomString()
 
 			store[u.CorrelationID] = append(store[u.CorrelationID], shortLink, u.OriginalURL)
-
+			fmt.Println("batch before", store)
 			if len(store) == size {
 				err = s.PutURLsBatch(ctx, uid, store)
 				//clear map
-				store = make(map[string][]string)
+				//store = make(map[string][]string)
+				for k := range store {
+					delete(store, k)
+				}
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
 			}
 			// сбрасываем оставшиеся данные в хранилище
-			err = s.PutURLsBatch(ctx, uid, store)
+			//err = s.PutURLsBatch(ctx, uid, store)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
@@ -298,6 +301,7 @@ func batch(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.R
 		decoder.Token()
 
 		var resp News
+		fmt.Println("batch after", store)
 
 		for correlationID, value := range store {
 			resp = append(resp, URLStructBatchResponse{
@@ -331,7 +335,7 @@ func main() {
 		sslmode  = "disable"
 	)
 
-	//PSQLConn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s", host, port, user, password, dbname, sslmode)
+	PSQLConn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s", host, port, user, password, dbname, sslmode)
 	// получаем UUID
 	UUID := uuid.New()
 	UUIDStr := UUID.String()
@@ -339,7 +343,7 @@ func main() {
 	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL из cl")
 	severAddress := flag.String("a", ":8080", "SERVER_ADDRESS из cl")
 	fileStoragePath := flag.String("f", "store.json", "FILE_STORAGE_PATH из cl")
-	dbAddress := flag.String("d", "", "DATABASE_DSN")
+	dbAddress := flag.String("d", PSQLConn, "DATABASE_DSN")
 	flag.Parse()
 
 	// вставляем в структуру cfg значения из флагов
