@@ -114,6 +114,9 @@ func (fs *FileStorage) PutURL(uid, key, value string) (string, error) {
 }
 
 func (fs *FileStorage) PutURLsBatch(_ context.Context, uid string, store map[string][]string) (err error) {
+	if _, ok := fs.ms.URLs[uid]; !ok {
+		fs.ms.URLs[uid] = map[string]string{}
+	}
 	for CorrelationID, OriginalURL := range store {
 		fs.ms.URLs[uid][CorrelationID] = OriginalURL[1]
 	}
