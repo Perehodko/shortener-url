@@ -143,7 +143,8 @@ func (s *dbstorage) PutURLsBatch(ctx context.Context, uid string, store map[stri
 	defer tx.Rollback()
 
 	// шаг 2 — готовим инструкцию
-	stmt, err := tx.PrepareContext(ctx, "INSERT INTO users_info (uid, short_link, original_url) VALUES ($1, $2, $3)")
+	stmt, err := tx.PrepareContext(ctx,
+		"INSERT INTO users_info (uid, short_link, original_url) VALUES ($1, $2, $3) ON CONFLICT(original_url) DO NOTHING")
 	if err != nil {
 		return err
 	}
