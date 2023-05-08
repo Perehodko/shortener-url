@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"github.com/Perehodko/shortener-url/internal/dbstorage"
 	"github.com/Perehodko/shortener-url/internal/middlewares"
 	"github.com/Perehodko/shortener-url/internal/storage"
@@ -35,7 +36,6 @@ var cfg Config
 func getURLForCut(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		statusHeader := http.StatusCreated
 
 		var shortLinkFromDB string
 
@@ -54,11 +54,14 @@ func getURLForCut(s storage.Storage, UUID string) func(w http.ResponseWriter, r 
 		}
 
 		urlForCuts := string(bodyData)
-
 		shortLink := utils.GenerateRandomString()
-
 		//записываем в мапу s.URLs[UUID] = map[shortLink]urlForCuts{}
-		shortLink, err = s.PutURL(UUID, shortLink, urlForCuts)
+		shortLinkFromStore, err := s.PutURL(UUID, shortLink, urlForCuts)
+		fmt.Println("shortLinkFromStore", shortLinkFromStore)
+		if shortLinkFromStore == "" {
+			shortLinkFromStore = shortLink
+		}
+		shortLinkFromDB = shortLinkFromStore
 		if err != nil {
 			var linkExistsErr *dbstorage.LinkExistsError
 			if !errors.As(err, &linkExistsErr) {
@@ -66,12 +69,11 @@ func getURLForCut(s storage.Storage, UUID string) func(w http.ResponseWriter, r 
 				return
 			}
 			shortLinkFromDB = linkExistsErr.LinkID
-			statusHeader = http.StatusConflict
+			w.WriteHeader(http.StatusConflict)
 		}
 		shortURL := cfg.BaseURL + "/" + shortLinkFromDB
-
 		workwithcookie.SetUUIDCookie(w, uid)
-		w.WriteHeader(statusHeader)
+		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte(shortURL))
 	}
 }
@@ -135,7 +137,11 @@ func shorten(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http
 
 		shortLink := utils.GenerateRandomString()
 
-		shortLink, err = s.PutURL(UUID, shortLink, urlForCuts)
+		shortLinkFromStore, err := s.PutURL(UUID, shortLink, urlForCuts)
+		if shortLinkFromStore == "" {
+			shortLinkFromStore = shortLink
+		}
+		shortLinkFromDB = shortLinkFromStore
 		if err != nil {
 			var linkExistsErr *dbstorage.LinkExistsError
 			if !errors.As(err, &linkExistsErr) {

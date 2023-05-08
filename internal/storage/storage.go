@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Perehodko/shortener-url/internal/dbstorage"
 	"io"
 	"os"
 )
@@ -22,12 +23,20 @@ type URLStorage struct {
 }
 
 func (s *URLStorage) PutURL(uid, shortLink, urlForCuts string) (string, error) {
+	sh := shortLink
 	if _, ok := s.URLs[uid]; !ok {
 		s.URLs[uid] = map[string]string{}
 	}
 
-	s.URLs[uid][shortLink] = urlForCuts
-	return "", nil
+	for key, value := range s.URLs[uid] {
+		if value == urlForCuts {
+			return key, dbstorage.NewLinkExistsError(key)
+		}
+	}
+
+	s.URLs[uid][sh] = urlForCuts
+	fmt.Println(s.URLs, sh)
+	return sh, nil
 }
 
 func (s *URLStorage) GetURL(uid, shortLink string) (string, error) {
