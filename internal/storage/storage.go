@@ -35,7 +35,6 @@ func (s *URLStorage) PutURL(uid, shortLink, urlForCuts string) (string, error) {
 	}
 
 	s.URLs[uid][sh] = urlForCuts
-	fmt.Println(s.URLs, sh)
 	return sh, nil
 }
 

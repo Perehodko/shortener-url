@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
-	"fmt"
 	"github.com/Perehodko/shortener-url/internal/dbstorage"
 	"github.com/Perehodko/shortener-url/internal/middlewares"
 	"github.com/Perehodko/shortener-url/internal/storage"
@@ -54,10 +53,10 @@ func getURLForCut(s storage.Storage, UUID string) func(w http.ResponseWriter, r 
 		}
 
 		urlForCuts := string(bodyData)
+
 		shortLink := utils.GenerateRandomString()
-		//записываем в мапу s.URLs[UUID] = map[shortLink]urlForCuts{}
+
 		shortLinkFromStore, err := s.PutURL(UUID, shortLink, urlForCuts)
-		//fmt.Println("shortLinkFromStore", shortLinkFromStore)
 		if shortLinkFromStore == "" {
 			shortLinkFromStore = shortLink
 		}
@@ -262,8 +261,8 @@ func batch(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.R
 		var u URLStructBatch
 		//buffer size
 		size := 1
-		store := make(map[string][]string)
-		store2 := make(map[string][]string)
+		storeForBatch := make(map[string][]string)
+		storeForResponse := make(map[string][]string)
 
 		// read open bracket
 		decoder.Token()
@@ -276,22 +275,20 @@ func batch(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.R
 				log.Fatal(err)
 			}
 			shortLink := utils.GenerateRandomString()
-			store[u.CorrelationID] = append(store[u.CorrelationID], shortLink, u.OriginalURL)
-			store2[u.CorrelationID] = append(store2[u.CorrelationID], shortLink, u.OriginalURL)
+			storeForBatch[u.CorrelationID] = append(storeForBatch[u.CorrelationID], shortLink, u.OriginalURL)
+			storeForResponse[u.CorrelationID] = append(storeForResponse[u.CorrelationID], shortLink, u.OriginalURL)
 
-			fmt.Println("batch before", store)
-
-			if len(store) == size {
-				err = s.PutURLsBatch(ctx, uid, store)
+			if len(storeForBatch) == size {
+				err = s.PutURLsBatch(ctx, uid, storeForBatch)
 				//clear map
-				store = make(map[string][]string)
+				storeForBatch = make(map[string][]string)
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
 			}
 			// сбрасываем оставшиеся данные в хранилище
-			err = s.PutURLsBatch(ctx, uid, store)
+			err = s.PutURLsBatch(ctx, uid, storeForBatch)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
@@ -301,9 +298,8 @@ func batch(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.R
 		decoder.Token()
 
 		var resp News
-		fmt.Println("batch after", store)
 
-		for correlationID, value := range store2 {
+		for correlationID, value := range storeForResponse {
 			resp = append(resp, URLStructBatchResponse{
 				CorrelationID: correlationID,
 				ShortURL:      cfg.BaseURL + "/" + value[0],

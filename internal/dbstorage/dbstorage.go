@@ -17,7 +17,7 @@ func NewDBStorage(DBAddress string) *dbstorage {
 	var err error
 	s.db, err = sql.Open("postgres", DBAddress)
 	if err != nil {
-		//fmt.Errorf("cant't open database: %w", err)
+		fmt.Errorf("cant't open database: %w", err)
 		panic(err)
 	}
 
@@ -31,7 +31,7 @@ func NewDBStorage(DBAddress string) *dbstorage {
 		CREATE UNIQUE INDEX IF NOT EXISTS original_url_index ON users_info (original_url);
     `)
 	if err != nil {
-		//fmt.Errorf("cant't create table: %w", err)
+		fmt.Errorf("cant't create table: %w", err)
 		panic(err)
 	}
 	return &s
@@ -66,10 +66,6 @@ func (s *dbstorage) PutURL(uid, shortLink, urlForCuts string) (string, error) {
 	ON CONFLICT(original_url) DO UPDATE SET short_link=users_info.short_link
     RETURNING short_link
 	;`, uid, shortLink, urlForCuts).Scan(&linkID)
-	//fmt.Println("err!!!!!!!!!!!!", err)
-	//fmt.Println("&linkID", &linkID, linkID)
-	//fmt.Println("shortLink", shortLink)
-	//fmt.Println("urlForCuts", urlForCuts)
 	if err != nil {
 		return "", err
 	}
@@ -150,8 +146,6 @@ func (s *dbstorage) PutURLsBatch(ctx context.Context, uid string, store map[stri
 	}
 	// шаг 2.1 — не забываем закрыть инструкцию, когда она больше не нужна
 	defer stmt.Close()
-
-	fmt.Println("bdStore - store", store)
 
 	for _, value := range store {
 		// шаг 3 — указываем, что каждая запись будет добавлена в транзакцию
