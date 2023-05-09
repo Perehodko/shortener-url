@@ -46,7 +46,6 @@ func getURLForCut(s storage.Storage, UUID string) func(w http.ResponseWriter, r 
 		// читаем Body
 		defer r.Body.Close()
 		bodyData, err := io.ReadAll(r.Body)
-		// обрабатываем ошибку
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -260,7 +259,7 @@ func batch(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.R
 
 		var u URLStructBatch
 		//buffer size
-		size := 1
+		size := 50
 		storeForBatch := make(map[string][]string)
 		storeForResponse := make(map[string][]string)
 
@@ -322,16 +321,6 @@ func batch(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.R
 }
 
 func main() {
-	const (
-		host     = "localhost"
-		port     = 5432
-		user     = "postgres"
-		password = "password"
-		dbname   = "postgres"
-		sslmode  = "disable"
-	)
-
-	//PSQLConn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s", host, port, user, password, dbname, sslmode)
 	// получаем UUID
 	UUID := uuid.New()
 	UUIDStr := UUID.String()

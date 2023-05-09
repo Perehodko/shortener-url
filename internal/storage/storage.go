@@ -18,7 +18,6 @@ type Storage interface {
 }
 
 type URLStorage struct {
-	//URLs map[string]string
 	URLs map[string]map[string]string
 }
 
