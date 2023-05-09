@@ -17,7 +17,6 @@ func NewDBStorage(DBAddress string) *dbstorage {
 	var err error
 	s.db, err = sql.Open("postgres", DBAddress)
 	if err != nil {
-		fmt.Errorf("cant't open database: %w", err)
 		panic(err)
 	}
 
@@ -31,7 +30,6 @@ func NewDBStorage(DBAddress string) *dbstorage {
 		CREATE UNIQUE INDEX IF NOT EXISTS original_url_index ON users_info (original_url);
     `)
 	if err != nil {
-		fmt.Errorf("cant't create table: %w", err)
 		panic(err)
 	}
 	return &s
