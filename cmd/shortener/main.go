@@ -347,7 +347,7 @@ func main() {
 
 	var s memorystorage.Storage
 	if cfg.dbAddress != "" {
-		s = dbstorage.NewDBStorage(*dbAddress)
+		s, err = dbstorage.NewDBStorage(*dbAddress)
 	} else {
 		s, err = NewStorage(cfg.FileName)
 		if err != nil {
