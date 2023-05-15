@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-// file memorystorage
+// FileStorage file memorystorage
 type FileStorage struct {
 	ms *st.URLStorage // сделаем внутреннюю хранилку в памяти тоже интерфейсом, на случай если захотим ее замокать
 	f  *os.File
