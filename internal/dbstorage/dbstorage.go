@@ -12,7 +12,7 @@ type dbstorage struct {
 	db *sql.DB
 }
 
-func NewDBStorage(DBAddress string) *dbstorage {
+func NewDBStorage(DBAddress string) (*dbstorage, error) {
 	s := dbstorage{}
 	var err error
 	s.db, err = sql.Open("postgres", DBAddress)
@@ -30,9 +30,9 @@ func NewDBStorage(DBAddress string) *dbstorage {
 		CREATE UNIQUE INDEX IF NOT EXISTS original_url_index ON users_info (original_url);
     `)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return &s
+	return &s, nil
 }
 
 // LinkExistsError говорит о том, что в хранилище уже есть ссылка, которую пытаются сократить повторно.
@@ -86,7 +86,7 @@ func (s *dbstorage) GetURL(uid, shortLink string) (string, error) {
 	)
 	for rows.Next() {
 		if err := rows.Scan(&UID, &originalURL); err != nil {
-			log.Fatal(err)
+			return "", err
 		}
 	}
 	if len(originalURL) == 0 {
