@@ -1,83 +1,17 @@
-package storage
+package filetorage
 
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"github.com/Perehodko/shortener-url/internal/dbstorage"
+	st "github.com/Perehodko/shortener-url/internal/memorystorage"
 	"io"
 	"os"
 )
 
-type Storage interface {
-	PutURL(uid, shortLink, urlForCuts string) (string, error)
-	GetURL(uid, shortURL string) (string, error)
-	GetUserURLs(uid string) (map[string]string, error)
-	PutURLsBatch(ctx context.Context, uid string, store map[string][]string) error
-}
-
-type URLStorage struct {
-	URLs map[string]map[string]string
-}
-
-func (s *URLStorage) PutURL(uid, shortLink, urlForCuts string) (string, error) {
-	sh := shortLink
-	if _, ok := s.URLs[uid]; !ok {
-		s.URLs[uid] = map[string]string{}
-	}
-
-	for key, value := range s.URLs[uid] {
-		if value == urlForCuts {
-			return key, dbstorage.NewLinkExistsError(key)
-		}
-	}
-
-	s.URLs[uid][sh] = urlForCuts
-	return sh, nil
-}
-
-func (s *URLStorage) GetURL(uid, shortLink string) (string, error) {
-	if len(s.URLs[uid]) == 0 {
-		return "", errors.New("in map no shortURL from request")
-	} else {
-		initialURL := s.URLs[uid][shortLink]
-		return initialURL, nil
-	}
-}
-
-func (s *URLStorage) GetUserURLs(uid string) (map[string]string, error) {
-	if _, ok := s.URLs[uid]; !ok {
-		return map[string]string{}, errors.New("in map no shortURL from request")
-	} else {
-		return s.URLs[uid], nil
-	}
-}
-
-func (s *URLStorage) PutURLsBatch(_ context.Context, uid string, store map[string][]string) error {
-	if _, ok := s.URLs[uid]; !ok {
-		s.URLs[uid] = map[string]string{}
-	}
-	for CorrelationID, OriginalURL := range store {
-		s.URLs[uid][CorrelationID] = OriginalURL[1]
-	}
-	return nil
-}
-
-// NewURLStore returns a new/empty URLStorage
-func NewURLStore() *URLStorage {
-	return &URLStorage{
-		URLs: make(map[string]map[string]string),
-	}
-}
-
-func NewMemStorage() *URLStorage { //  возвращаем интерфейс
-	return &URLStorage{URLs: make(map[string]map[string]string)}
-}
-
-// file storage
+// file memorystorage
 type FileStorage struct {
-	ms *URLStorage // сделаем внутреннюю хранилку в памяти тоже интерфейсом, на случай если захотим ее замокать
+	ms *st.URLStorage // сделаем внутреннюю хранилку в памяти тоже интерфейсом, на случай если захотим ее замокать
 	f  *os.File
 }
 
@@ -151,7 +85,7 @@ func NewFileStorage(filename string) (*FileStorage, error) { // и здесь м
 	}
 
 	return &FileStorage{
-		ms: &URLStorage{URLs: m},
+		ms: &st.URLStorage{URLs: m},
 		f:  file,
 	}, nil
 }

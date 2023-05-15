@@ -7,8 +7,9 @@ import (
 	"errors"
 	"flag"
 	"github.com/Perehodko/shortener-url/internal/dbstorage"
+	"github.com/Perehodko/shortener-url/internal/filetorage"
+	"github.com/Perehodko/shortener-url/internal/memorystorage"
 	"github.com/Perehodko/shortener-url/internal/middlewares"
-	"github.com/Perehodko/shortener-url/internal/storage"
 	"github.com/Perehodko/shortener-url/internal/utils"
 	"github.com/Perehodko/shortener-url/internal/workwithcookie"
 	"github.com/caarlos0/env/v6"
@@ -32,7 +33,7 @@ type Config struct {
 
 var cfg Config
 
-func getURLForCut(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
+func getURLForCut(s memorystorage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 
@@ -82,7 +83,7 @@ func notFoundFunc(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Not found"))
 }
 
-func redirectTo(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
+func redirectTo(s memorystorage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		shortURL := chi.URLParam(r, "id")
 
@@ -112,7 +113,7 @@ type Res struct {
 	Result string `json:"result"`
 }
 
-func shorten(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
+func shorten(s memorystorage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		statusHeader := http.StatusCreated
 		var shortLinkFromDB string
@@ -165,17 +166,17 @@ func shorten(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http
 	}
 }
 
-func NewStorage(fileName string) (storage.Storage, error) {
+func NewStorage(fileName string) (memorystorage.Storage, error) {
 	if len(fileName) != 0 {
-		fileStorage, err := storage.NewFileStorage(fileName)
+		fileStorage, err := filetorage.NewFileStorage(fileName)
 		return fileStorage, err
 	} else {
-		fileStorage := storage.NewMemStorage()
+		fileStorage := memorystorage.NewMemStorage()
 		return fileStorage, nil
 	}
 }
 
-func getUserURLs(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
+func getUserURLs(s memorystorage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		uid, err := workwithcookie.ExtractUID(r.Cookies())
@@ -245,7 +246,7 @@ type URLStructBatchResponse struct {
 
 type News []URLStructBatchResponse
 
-func batch(s storage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
+func batch(s memorystorage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 		defer cancel()
@@ -344,7 +345,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var s storage.Storage
+	var s memorystorage.Storage
 	if cfg.dbAddress != "" {
 		s = dbstorage.NewDBStorage(*dbAddress)
 	} else {
