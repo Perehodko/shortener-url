@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	config "github.com/Perehodko/shortener-url/internal/app/config"
 	"github.com/Perehodko/shortener-url/internal/dbstorage"
 	"github.com/Perehodko/shortener-url/internal/filetorage"
 	"github.com/Perehodko/shortener-url/internal/memorystorage"
@@ -24,14 +25,14 @@ import (
 	"time"
 )
 
-type Config struct {
-	ServerAddress string `env:"SERVER_ADDRESS"`
-	BaseURL       string `env:"BASE_URL"`
-	FileName      string `env:"FILE_STORAGE_PATH"`
-	dbAddress     string `env:"DATABASE_DSN"`
-}
-
-var cfg Config
+//type Config struct {
+//	ServerAddress string `env:"SERVER_ADDRESS"`
+//	BaseURL       string `env:"BASE_URL"`
+//	FileName      string `env:"FILE_STORAGE_PATH"`
+//	dbAddress     string `env:"DATABASE_DSN"`
+//}
+//
+//var cfg Config
 
 func getURLForCut(s memorystorage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -70,7 +71,7 @@ func getURLForCut(s memorystorage.Storage, UUID string) func(w http.ResponseWrit
 			shortLinkFromDB = linkExistsErr.LinkID
 			w.WriteHeader(http.StatusConflict)
 		}
-		shortURL := cfg.BaseURL + "/" + shortLinkFromDB
+		shortURL := config.Cfg.BaseURL + "/" + shortLinkFromDB
 		workwithcookie.SetUUIDCookie(w, uid)
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte(shortURL))
@@ -150,7 +151,7 @@ func shorten(s memorystorage.Storage, UUID string) func(w http.ResponseWriter, r
 			shortLinkFromDB = linkExistsErr.LinkID
 			statusHeader = http.StatusConflict
 		}
-		shortURL := cfg.BaseURL + "/" + shortLinkFromDB
+		shortURL := config.Cfg.BaseURL + "/" + shortLinkFromDB
 
 		tx := Res{Result: shortURL}
 		// преобразуем tx в JSON-формат
@@ -200,7 +201,7 @@ func getUserURLs(s memorystorage.Storage, UUID string) func(w http.ResponseWrite
 		var myMapSlice []M
 
 		for i, j := range getUserURLs {
-			res := M{"short_url": cfg.BaseURL + "/" + i, "original_url": j}
+			res := M{"short_url": config.Cfg.BaseURL + "/" + i, "original_url": j}
 			myMapSlice = append(myMapSlice, res)
 		}
 		//преобразуем в нужный формат
@@ -302,7 +303,7 @@ func batch(s memorystorage.Storage, UUID string) func(w http.ResponseWriter, r *
 		for correlationID, value := range storeForResponse {
 			resp = append(resp, URLStructBatchResponse{
 				CorrelationID: correlationID,
-				ShortURL:      cfg.BaseURL + "/" + value[0],
+				ShortURL:      config.Cfg.BaseURL + "/" + value[0],
 			})
 		}
 
@@ -333,26 +334,26 @@ func main() {
 	flag.Parse()
 
 	// вставляем в структуру cfg значения из флагов
-	cfg.ServerAddress = *severAddress
-	cfg.BaseURL = *baseURL
-	cfg.FileName = *fileStoragePath
-	cfg.dbAddress = *dbAddress
+	config.Cfg.ServerAddress = *severAddress
+	config.Cfg.BaseURL = *baseURL
+	config.Cfg.FileName = *fileStoragePath
+	config.Cfg.DbAddress = *dbAddress
 
 	// перезатираем их значениями энвов
 	// если значения в энве для поля структуры нет - то в поле останется значение из флага
-	err := env.Parse(&cfg)
+	err := env.Parse(&config.Cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	var s memorystorage.Storage
-	if cfg.dbAddress != "" {
+	if config.Cfg.DbAddress != "" {
 		s, err = dbstorage.NewDBStorage(*dbAddress)
 		if err != nil {
 			log.Fatal(err)
 		}
 	} else {
-		s, err = NewStorage(cfg.FileName)
+		s, err = NewStorage(config.Cfg.FileName)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -360,12 +361,12 @@ func main() {
 
 	r := chi.NewRouter()
 
-	ServerAddr := cfg.ServerAddress
+	ServerAddr := config.Cfg.ServerAddress
 	if len(ServerAddr) == 0 {
 		ServerAddr = *severAddress
 	}
 
-	DBAddress := cfg.dbAddress
+	DBAddress := config.Cfg.DbAddress
 	if len(DBAddress) == 0 {
 		DBAddress = *dbAddress
 	}
