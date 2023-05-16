@@ -337,7 +337,7 @@ func main() {
 	config.Cfg.ServerAddress = *severAddress
 	config.Cfg.BaseURL = *baseURL
 	config.Cfg.FileName = *fileStoragePath
-	config.Cfg.DbAddress = *dbAddress
+	config.Cfg.DBAddress = *dbAddress
 
 	// перезатираем их значениями энвов
 	// если значения в энве для поля структуры нет - то в поле останется значение из флага
@@ -347,7 +347,7 @@ func main() {
 	}
 
 	var s memorystorage.Storage
-	if config.Cfg.DbAddress != "" {
+	if config.Cfg.DBAddress != "" {
 		s, err = dbstorage.NewDBStorage(*dbAddress)
 		if err != nil {
 			log.Fatal(err)
@@ -366,7 +366,7 @@ func main() {
 		ServerAddr = *severAddress
 	}
 
-	DBAddress := config.Cfg.DbAddress
+	DBAddress := config.Cfg.DBAddress
 	if len(DBAddress) == 0 {
 		DBAddress = *dbAddress
 	}
