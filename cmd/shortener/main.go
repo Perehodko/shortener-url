@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -248,7 +247,7 @@ type News []URLStructBatchResponse
 
 func batch(s memorystorage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := context.WithValue(context.Background(), "request", r)
+		ctx := r.Context()
 
 		uid, err := workwithcookie.ExtractUID(r.Cookies())
 		if err != nil {
