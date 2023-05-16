@@ -188,7 +188,7 @@ func getUserURLs(s memorystorage.Storage, UUID string) func(w http.ResponseWrite
 
 		getUserURLs, err := s.GetUserURLs(UUID)
 		if err != nil {
-			http.Error(w, "internal error", http.StatusNoContent)
+			http.Error(w, "internal error", http.StatusNotFound)
 			return
 		}
 		if len(getUserURLs) == 0 {
