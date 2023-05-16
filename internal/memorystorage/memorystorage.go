@@ -7,9 +7,9 @@ import (
 )
 
 type Storage interface {
-	PutURL(uid, shortLink, urlForCuts string) (string, error)
-	GetURL(uid, shortURL string) (string, error)
-	GetUserURLs(uid string) (map[string]string, error)
+	PutURL(ctx context.Context, uid, shortLink, urlForCuts string) (string, error)
+	GetURL(ctx context.Context, uid, shortURL string) (string, error)
+	GetUserURLs(ctx context.Context, uid string) (map[string]string, error)
 	PutURLsBatch(ctx context.Context, uid string, store map[string][]string) error
 }
 
@@ -17,7 +17,7 @@ type URLStorage struct {
 	URLs map[string]map[string]string
 }
 
-func (s *URLStorage) PutURL(uid, shortLink, urlForCuts string) (string, error) {
+func (s *URLStorage) PutURL(_ context.Context, uid, shortLink, urlForCuts string) (string, error) {
 	sh := shortLink
 	if _, ok := s.URLs[uid]; !ok {
 		s.URLs[uid] = map[string]string{}
@@ -33,7 +33,7 @@ func (s *URLStorage) PutURL(uid, shortLink, urlForCuts string) (string, error) {
 	return sh, nil
 }
 
-func (s *URLStorage) GetURL(uid, shortLink string) (string, error) {
+func (s *URLStorage) GetURL(_ context.Context, uid, shortLink string) (string, error) {
 	if len(s.URLs[uid]) == 0 {
 		return "", errors.New("in map no shortURL from request")
 	} else {
@@ -42,7 +42,7 @@ func (s *URLStorage) GetURL(uid, shortLink string) (string, error) {
 	}
 }
 
-func (s *URLStorage) GetUserURLs(uid string) (map[string]string, error) {
+func (s *URLStorage) GetUserURLs(_ context.Context, uid string) (map[string]string, error) {
 	if _, ok := s.URLs[uid]; !ok {
 		return map[string]string{}, errors.New("in map no shortURL from request")
 	} else {

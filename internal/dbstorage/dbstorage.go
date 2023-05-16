@@ -50,15 +50,13 @@ func (e *LinkExistsError) Error() string {
 	return fmt.Sprintf("link alredy exists. short link id: %s", e.LinkID)
 }
 
-func (s *dbstorage) PutURL(uid, shortLink, urlForCuts string) (string, error) {
+func (s *dbstorage) PutURL(ctx context.Context, uid, shortLink, urlForCuts string) (string, error) {
 	var shortLinkFromDB string
-
-	err := s.db.QueryRow(
-		`
-	INSERT INTO users_info (uid, short_link, original_url) VALUES ($1, $2, $3)
+	query :=
+		`INSERT INTO users_info (uid, short_link, original_url) VALUES ($1, $2, $3)
 	ON CONFLICT(original_url) DO UPDATE SET short_link=users_info.short_link
-    RETURNING short_link;`,
-		uid, shortLink, urlForCuts).Scan(&shortLinkFromDB)
+    RETURNING short_link;`
+	err := s.db.QueryRowContext(ctx, query, uid, shortLink, urlForCuts).Scan(&shortLinkFromDB)
 	if err != nil {
 		return "", err
 	}
@@ -69,10 +67,9 @@ func (s *dbstorage) PutURL(uid, shortLink, urlForCuts string) (string, error) {
 	return shortLink, nil
 }
 
-func (s *dbstorage) GetURL(uid, shortLink string) (string, error) {
-	rows, _ := s.db.Query(
-		`
-	SELECT uid, original_url FROM users_info WHERE uid=$1 and short_link=$2`, uid, shortLink)
+func (s *dbstorage) GetURL(ctx context.Context, uid, shortLink string) (string, error) {
+	query := `SELECT uid, original_url FROM users_info WHERE uid=$1 and short_link=$2`
+	rows, _ := s.db.QueryContext(ctx, query, uid, shortLink)
 	err := rows.Err()
 
 	if err != nil {
@@ -96,9 +93,9 @@ func (s *dbstorage) GetURL(uid, shortLink string) (string, error) {
 	}
 }
 
-func (s *dbstorage) GetUserURLs(uid string) (map[string]string, error) {
-	rows, _ := s.db.Query(
-		`SELECT short_link, original_url FROM users_info WHERE uid=$1`, uid)
+func (s *dbstorage) GetUserURLs(ctx context.Context, uid string) (map[string]string, error) {
+	query := `SELECT short_link, original_url FROM users_info WHERE uid=$1`
+	rows, _ := s.db.QueryContext(ctx, query, uid)
 	err := rows.Err()
 
 	if err != nil {
@@ -130,10 +127,10 @@ func (s *dbstorage) PutURLsBatch(ctx context.Context, uid string, store map[stri
 	defer tx.Rollback()
 
 	// шаг 2 — готовим инструкцию
-	stmt, err := tx.PrepareContext(ctx,
-		`
+	query := `
 	INSERT INTO users_info (uid, short_link, original_url) 
-	VALUES ($1, $2, $3) ON CONFLICT(original_url) DO NOTHING`)
+	VALUES ($1, $2, $3) ON CONFLICT(original_url) DO NOTHING`
+	stmt, err := tx.PrepareContext(ctx, query)
 	if err != nil {
 		return err
 	}

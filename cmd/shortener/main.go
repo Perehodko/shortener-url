@@ -23,18 +23,10 @@ import (
 	"net/http"
 )
 
-//type Config struct {
-//	ServerAddress string `env:"SERVER_ADDRESS"`
-//	BaseURL       string `env:"BASE_URL"`
-//	FileName      string `env:"FILE_STORAGE_PATH"`
-//	dbAddress     string `env:"DATABASE_DSN"`
-//}
-//
-//var cfg Config
-
 func getURLForCut(s memorystorage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		ctx := r.Context()
 
 		var shortLinkFromDB string
 
@@ -55,7 +47,7 @@ func getURLForCut(s memorystorage.Storage, UUID string) func(w http.ResponseWrit
 
 		shortLink := utils.GenerateRandomString()
 
-		shortLinkFromStore, err := s.PutURL(UUID, shortLink, urlForCuts)
+		shortLinkFromStore, err := s.PutURL(ctx, UUID, shortLink, urlForCuts)
 		if shortLinkFromStore == "" {
 			shortLinkFromStore = shortLink
 		}
@@ -84,6 +76,7 @@ func notFoundFunc(w http.ResponseWriter, r *http.Request) {
 
 func redirectTo(s memorystorage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 		shortURL := chi.URLParam(r, "id")
 
 		uid, err := workwithcookie.ExtractUID(r.Cookies())
@@ -91,7 +84,7 @@ func redirectTo(s memorystorage.Storage, UUID string) func(w http.ResponseWriter
 			uid = UUID
 		}
 
-		initialURL, err := s.GetURL(UUID, shortURL)
+		initialURL, err := s.GetURL(ctx, UUID, shortURL)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -114,6 +107,8 @@ type Res struct {
 
 func shorten(s memorystorage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
 		statusHeader := http.StatusCreated
 		var shortLinkFromDB string
 
@@ -135,7 +130,7 @@ func shorten(s memorystorage.Storage, UUID string) func(w http.ResponseWriter, r
 
 		shortLink := utils.GenerateRandomString()
 
-		shortLinkFromStore, err := s.PutURL(UUID, shortLink, urlForCuts)
+		shortLinkFromStore, err := s.PutURL(ctx, UUID, shortLink, urlForCuts)
 		if shortLinkFromStore == "" {
 			shortLinkFromStore = shortLink
 		}
@@ -177,6 +172,7 @@ func NewStorage(fileName string) (memorystorage.Storage, error) {
 
 func getUserURLs(s memorystorage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 
 		uid, err := workwithcookie.ExtractUID(r.Cookies())
 		if err != nil {
@@ -184,7 +180,7 @@ func getUserURLs(s memorystorage.Storage, UUID string) func(w http.ResponseWrite
 			return
 		}
 
-		getUserURLs, err := s.GetUserURLs(UUID)
+		getUserURLs, err := s.GetUserURLs(ctx, UUID)
 		if err != nil {
 			http.Error(w, "internal error", http.StatusNotFound)
 			return
