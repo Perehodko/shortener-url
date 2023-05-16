@@ -22,7 +22,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"time"
 )
 
 //type Config struct {
@@ -249,8 +248,7 @@ type News []URLStructBatchResponse
 
 func batch(s memorystorage.Storage, UUID string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-		defer cancel()
+		ctx := context.WithValue(context.Background(), "request", r)
 
 		uid, err := workwithcookie.ExtractUID(r.Cookies())
 		if err != nil {
