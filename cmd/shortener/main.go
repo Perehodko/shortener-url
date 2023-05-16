@@ -200,8 +200,8 @@ func getUserURLs(s memorystorage.Storage, UUID string) func(w http.ResponseWrite
 		type M map[string]interface{}
 		var myMapSlice []M
 
-		for i, j := range getUserURLs {
-			res := M{"short_url": config.Cfg.BaseURL + "/" + i, "original_url": j}
+		for shortLink, originalURL := range getUserURLs {
+			res := M{"short_url": config.Cfg.BaseURL + "/" + shortLink, "original_url": originalURL}
 			myMapSlice = append(myMapSlice, res)
 		}
 		//преобразуем в нужный формат
