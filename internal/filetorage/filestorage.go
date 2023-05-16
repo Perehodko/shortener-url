@@ -15,16 +15,16 @@ type FileStorage struct {
 	f  *os.File
 }
 
-func (fs *FileStorage) GetUserURLs(_ context.Context, uid string) (map[string]string, error) {
-	return fs.ms.GetUserURLs(uid)
+func (fs *FileStorage) GetUserURLs(ctx context.Context, uid string) (map[string]string, error) {
+	return fs.ms.GetUserURLs(ctx, uid)
 }
 
-func (fs *FileStorage) GetURL(_ context.Context, uid, key string) (value string, err error) {
-	return fs.ms.GetURL(uid, key)
+func (fs *FileStorage) GetURL(ctx context.Context, uid, key string) (value string, err error) {
+	return fs.ms.GetURL(ctx, uid, key)
 }
 
-func (fs *FileStorage) PutURL(_ context.Context, uid, key, value string) (string, error) {
-	if _, err := fs.ms.PutURL(uid, key, value); err != nil {
+func (fs *FileStorage) PutURL(ctx context.Context, uid, key, value string) (string, error) {
+	if _, err := fs.ms.PutURL(ctx, uid, key, value); err != nil {
 		return "", fmt.Errorf("unable to add new key in memorystorage: %w", err)
 	}
 
